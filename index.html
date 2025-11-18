@@ -555,6 +555,104 @@
             color: #333;
         }
 
+        /* Name Input */
+        #name-input {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        #name-input:focus {
+            outline: none;
+            border-color: var(--table-green);
+        }
+
+        /* Lobby Styles */
+        .lobby-container {
+            text-align: left;
+        }
+
+        .lobby-teams {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .lobby-team {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            min-height: 120px;
+        }
+
+        .lobby-team-red {
+            background-color: rgba(255, 92, 92, 0.15);
+            border: 2px solid var(--team-red);
+        }
+
+        .lobby-team-blue {
+            background-color: rgba(92, 140, 255, 0.15);
+            border: 2px solid var(--team-blue);
+        }
+
+        .lobby-team h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .lobby-player {
+            padding: 5px 8px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .lobby-player-filled {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .lobby-player-empty {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: #999;
+            font-style: italic;
+        }
+
+        .lobby-player-you {
+            font-weight: 700;
+        }
+
+        .team-select-btn {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            background: var(--table-green-dark);
+            color: white;
+        }
+
+        .team-select-btn:hover {
+            background: #0b8046;
+        }
+
+        #start-game-btn {
+            margin-top: 10px;
+        }
+
+        #start-game-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         /* Responsive Design */
         @media (max-width: 700px) {
             #game-container {
@@ -761,28 +859,56 @@
 
                 <!-- Initial Menu -->
                 <div id="menu-main">
+                    <input type="text" id="name-input" placeholder="Enter your name" maxlength="20">
                     <button class="menu-btn menu-btn-primary" id="play-ai-btn">Play vs AI</button>
                     <button class="menu-btn menu-btn-secondary" id="host-game-btn">Host Game</button>
                     <button class="menu-btn menu-btn-secondary" id="join-game-btn">Join Game</button>
                 </div>
 
-                <!-- Host Game View -->
-                <div id="menu-host" style="display: none;">
+                <!-- Host/Join Lobby View -->
+                <div id="menu-lobby" style="display: none;">
                     <div id="host-info">
-                        <p>Your Game Code:</p>
-                        <p id="game-code">------</p>
-                        <p style="margin-top: 10px;">Share this link:</p>
-                        <p id="share-link">Generating...</p>
-                        <button class="copy-btn" id="copy-link-btn">Copy</button>
+                        <p>Game Code: <span id="game-code">------</span>
+                            <button class="copy-btn" id="copy-code-btn">Copy</button>
+                        </p>
+                        <p id="share-link-container" style="font-size: 0.75rem; color: #666;">
+                            <span id="share-link"></span>
+                            <button class="copy-btn" id="copy-link-btn">Copy Link</button>
+                        </p>
                     </div>
-                    <div id="connection-status" class="status-waiting">Waiting for opponent...</div>
-                    <p id="waiting-message">Share the code or link with a friend to start playing!</p>
-                    <button class="back-btn" id="host-back-btn">← Back to Menu</button>
+
+                    <div class="lobby-container">
+                        <div class="lobby-teams">
+                            <div class="lobby-team lobby-team-red">
+                                <h4 class="team-red-text">Team Red</h4>
+                                <div id="lobby-red-slot1" class="lobby-player lobby-player-empty">
+                                    <span>Empty</span>
+                                </div>
+                                <div id="lobby-red-slot2" class="lobby-player lobby-player-empty">
+                                    <span>Empty</span>
+                                </div>
+                            </div>
+                            <div class="lobby-team lobby-team-blue">
+                                <h4 class="team-blue-text">Team Blue</h4>
+                                <div id="lobby-blue-slot1" class="lobby-player lobby-player-empty">
+                                    <span>Empty</span>
+                                </div>
+                                <div id="lobby-blue-slot2" class="lobby-player lobby-player-empty">
+                                    <span>Empty</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="lobby-status" class="status-waiting">Waiting for players...</div>
+                        <button class="menu-btn menu-btn-primary" id="start-game-btn">Start Game</button>
+                    </div>
+                    <button class="back-btn" id="lobby-back-btn">← Back to Menu</button>
                 </div>
 
                 <!-- Join Game View -->
                 <div id="menu-join" style="display: none;">
-                    <p>Enter Game Code:</p>
+                    <input type="text" id="join-name-input" placeholder="Enter your name" maxlength="20">
+                    <p style="margin-top: 10px;">Enter Game Code:</p>
                     <input type="text" id="join-input" placeholder="XXXXXX" maxlength="6">
                     <button class="menu-btn menu-btn-secondary" id="join-connect-btn">Connect</button>
                     <div id="join-status"></div>
@@ -879,13 +1005,16 @@
             // Menu elements
             const mainMenuModal = document.getElementById('main-menu-modal');
             const menuMain = document.getElementById('menu-main');
-            const menuHost = document.getElementById('menu-host');
+            const menuLobby = document.getElementById('menu-lobby');
             const menuJoin = document.getElementById('menu-join');
+            const nameInput = document.getElementById('name-input');
+            const joinNameInput = document.getElementById('join-name-input');
             const gameCodeDisplay = document.getElementById('game-code');
             const shareLinkDisplay = document.getElementById('share-link');
-            const connectionStatus = document.getElementById('connection-status');
+            const lobbyStatus = document.getElementById('lobby-status');
             const joinInput = document.getElementById('join-input');
             const joinStatus = document.getElementById('join-status');
+            const startGameBtn = document.getElementById('start-game-btn');
 
             // --- GAME STATE ---
             let deck = [];
@@ -907,6 +1036,25 @@
             let isMultiplayer = false;
             let myPosition = 'south'; // The human player's position
             let gameCode = '';
+            let myName = '';
+
+            // Lobby state - tracks all players in lobby
+            // positions: south, north, east, west
+            // Each slot: { name: string, oderId: string, team: 'teamRed'|'teamBlue', position: string }
+            let lobbyPlayers = {
+                south: null,  // Team Red
+                north: null,  // Team Red
+                east: null,   // Team Blue
+                west: null    // Team Blue
+            };
+
+            // Player names for display during game
+            let playerNames = {
+                south: 'South',
+                north: 'North',
+                east: 'East',
+                west: 'West'
+            };
 
             // --- CORE GAME LOGIC ---
 
@@ -1745,7 +1893,7 @@
 
                 // Reset menu views
                 menuMain.style.display = 'block';
-                menuHost.style.display = 'none';
+                menuLobby.style.display = 'none';
                 menuJoin.style.display = 'none';
 
                 // If URL has join code, go straight to join
@@ -1759,7 +1907,7 @@
              * Generate a random 6-character game code
              */
             function generateGameCode() {
-                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed ambiguous chars
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
                 let code = '';
                 for (let i = 0; i < 6; i++) {
                     code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -1768,12 +1916,140 @@
             }
 
             /**
-             * Show the host game view
+             * Reset lobby state
+             */
+            function resetLobby() {
+                lobbyPlayers = {
+                    south: null,
+                    north: null,
+                    east: null,
+                    west: null
+                };
+            }
+
+            /**
+             * Show the lobby (for both host and guest)
+             */
+            function showLobby() {
+                menuMain.style.display = 'none';
+                menuJoin.style.display = 'none';
+                menuLobby.style.display = 'block';
+
+                // Hide host info for guests
+                document.getElementById('host-info').style.display = isHost ? 'block' : 'none';
+
+                renderLobby();
+            }
+
+            /**
+             * Render the lobby display
+             */
+            function renderLobby() {
+                // Team Red slots (south, north)
+                const redSlot1 = document.getElementById('lobby-red-slot1');
+                const redSlot2 = document.getElementById('lobby-red-slot2');
+
+                // Team Blue slots (east, west)
+                const blueSlot1 = document.getElementById('lobby-blue-slot1');
+                const blueSlot2 = document.getElementById('lobby-blue-slot2');
+
+                // Render each slot
+                renderLobbySlot(redSlot1, lobbyPlayers.south, 'south');
+                renderLobbySlot(redSlot2, lobbyPlayers.north, 'north');
+                renderLobbySlot(blueSlot1, lobbyPlayers.east, 'east');
+                renderLobbySlot(blueSlot2, lobbyPlayers.west, 'west');
+
+                // Update player count
+                const playerCount = Object.values(lobbyPlayers).filter(p => p !== null).length;
+                lobbyStatus.textContent = `${playerCount}/4 players`;
+                lobbyStatus.className = playerCount > 0 ? 'status-connected' : 'status-waiting';
+
+                // Enable/disable start button (host only, need at least 1 player)
+                if (startGameBtn) {
+                    startGameBtn.disabled = !isHost || playerCount === 0;
+                }
+            }
+
+            /**
+             * Render a single lobby slot
+             */
+            function renderLobbySlot(slotEl, player, position) {
+                if (player) {
+                    const isMe = player.peerId === (peer ? peer.id : 'host');
+                    const nameSpan = `<span>${player.name}${isMe ? ' (You)' : ''}</span>`;
+
+                    // Show switch button if it's me and I'm not the only player
+                    let switchBtn = '';
+                    if (isMe) {
+                        const canSwitchTo = getAvailableTeamSwitch(position);
+                        if (canSwitchTo) {
+                            switchBtn = `<button class="team-select-btn" onclick="switchTeam('${position}', '${canSwitchTo}')">Switch</button>`;
+                        }
+                    }
+
+                    slotEl.innerHTML = nameSpan + switchBtn;
+                    slotEl.className = `lobby-player lobby-player-filled${isMe ? ' lobby-player-you' : ''}`;
+                } else {
+                    slotEl.innerHTML = '<span>Empty (AI)</span>';
+                    slotEl.className = 'lobby-player lobby-player-empty';
+                }
+            }
+
+            /**
+             * Get available position to switch to
+             */
+            function getAvailableTeamSwitch(currentPos) {
+                const teamRed = ['south', 'north'];
+                const teamBlue = ['east', 'west'];
+
+                if (teamRed.includes(currentPos)) {
+                    // Can switch to blue if there's an empty slot
+                    for (const pos of teamBlue) {
+                        if (!lobbyPlayers[pos]) return pos;
+                    }
+                } else {
+                    // Can switch to red if there's an empty slot
+                    for (const pos of teamRed) {
+                        if (!lobbyPlayers[pos]) return pos;
+                    }
+                }
+                return null;
+            }
+
+            /**
+             * Switch team (called from lobby UI)
+             */
+            window.switchTeam = function(fromPos, toPos) {
+                const player = lobbyPlayers[fromPos];
+                if (!player) return;
+
+                lobbyPlayers[fromPos] = null;
+                lobbyPlayers[toPos] = player;
+                myPosition = toPos;
+
+                renderLobby();
+
+                // Broadcast update if host
+                if (isHost) {
+                    broadcastLobbyState();
+                } else {
+                    // Guest sends switch request to host
+                    broadcast({ type: 'switchTeam', fromPos, toPos, peerId: peer.id });
+                }
+            };
+
+            /**
+             * Broadcast lobby state to all connected peers
+             */
+            function broadcastLobbyState() {
+                broadcast({ type: 'lobbyState', lobby: lobbyPlayers });
+            }
+
+            /**
+             * Host a game - show lobby
              */
             function showHostView() {
-                menuMain.style.display = 'none';
-                menuHost.style.display = 'block';
-
+                myName = nameInput.value.trim() || 'Player';
                 gameCode = generateGameCode();
                 gameCodeDisplay.textContent = gameCode;
 
@@ -1785,43 +2061,47 @@
                 isMultiplayer = true;
                 myPosition = 'south';
 
+                // Reset and add host to lobby
+                resetLobby();
+                lobbyPlayers.south = { name: myName, peerId: 'host', position: 'south' };
+
                 peer = new Peer('trump-' + gameCode);
 
                 peer.on('open', (id) => {
                     console.log('Host peer opened with ID:', id);
-                    connectionStatus.textContent = 'Waiting for opponent...';
-                    connectionStatus.className = 'status-waiting';
+                    showLobby();
                 });
 
                 peer.on('connection', (conn) => {
-                    console.log('Guest connected!');
+                    console.log('New player connecting...');
                     connections.push(conn);
 
                     conn.on('open', () => {
-                        connectionStatus.textContent = 'Opponent connected!';
-                        connectionStatus.className = 'status-connected';
-
-                        // Start game after short delay
-                        setTimeout(() => {
-                            hideModal();
-                            initGame();
-                        }, 1000);
+                        // Wait for player info
                     });
 
                     conn.on('data', (data) => {
-                        handlePeerData(data);
+                        handlePeerData(data, conn);
                     });
 
                     conn.on('close', () => {
-                        console.log('Guest disconnected');
-                        updateStatusMessage('Opponent disconnected!');
+                        console.log('Player disconnected');
+                        // Remove from lobby
+                        for (const pos of POSITIONS) {
+                            if (lobbyPlayers[pos] && lobbyPlayers[pos].peerId === conn.peer) {
+                                lobbyPlayers[pos] = null;
+                                break;
+                            }
+                        }
+                        renderLobby();
+                        broadcastLobbyState();
                     });
                 });
 
                 peer.on('error', (err) => {
                     console.error('Peer error:', err);
-                    connectionStatus.textContent = 'Connection error: ' + err.type;
-                    connectionStatus.className = 'status-error';
+                    lobbyStatus.textContent = 'Connection error: ' + err.type;
+                    lobbyStatus.className = 'status-error';
                 });
             }
 
@@ -1846,6 +2126,7 @@
                     return;
                 }
 
+                myName = joinNameInput.value.trim() || 'Player';
                 joinStatus.textContent = 'Connecting...';
                 joinStatus.className = 'status-waiting';
 
@@ -1863,13 +2144,11 @@
 
                     conn.on('open', () => {
                         console.log('Connected to host!');
-                        joinStatus.textContent = 'Connected! Starting game...';
+                        joinStatus.textContent = 'Connected! Joining lobby...';
                         joinStatus.className = 'status-connected';
 
-                        // Hide modal - host will send game state
-                        setTimeout(() => {
-                            hideModal();
-                        }, 1000);
+                        // Send player info to host
+                        conn.send({ type: 'joinLobby', name: myName, peerId: peer.id });
                     });
 
                     conn.on('data', (data) => {
@@ -1903,10 +2182,70 @@
             /**
              * Handle incoming peer data
              */
-            function handlePeerData(data) {
+            function handlePeerData(data, conn) {
                 console.log('Received:', data.type);
 
                 switch (data.type) {
+                    case 'joinLobby':
+                        // Guest joining lobby (host receives this)
+                        if (isHost) {
+                            // Find first empty slot
+                            let assignedPos = null;
+                            for (const pos of ['north', 'east', 'west']) {
+                                if (!lobbyPlayers[pos]) {
+                                    assignedPos = pos;
+                                    break;
+                                }
+                            }
+                            if (assignedPos) {
+                                lobbyPlayers[assignedPos] = {
+                                    name: data.name,
+                                    peerId: data.peerId,
+                                    position: assignedPos
+                                };
+                                renderLobby();
+                                broadcastLobbyState();
+                            }
+                        }
+                        break;
+
+                    case 'lobbyState':
+                        // Guest receives lobby state from host
+                        if (!isHost) {
+                            lobbyPlayers = data.lobby;
+                            // Find my position
+                            for (const pos of POSITIONS) {
+                                if (lobbyPlayers[pos] && lobbyPlayers[pos].peerId === peer.id) {
+                                    myPosition = pos;
+                                    break;
+                                }
+                            }
+                            showLobby();
+                            renderLobby();
+                        }
+                        break;
+
+                    case 'switchTeam':
+                        // Guest wants to switch teams (host receives this)
+                        if (isHost) {
+                            const player = lobbyPlayers[data.fromPos];
+                            if (player && player.peerId === data.peerId && !lobbyPlayers[data.toPos]) {
+                                lobbyPlayers[data.fromPos] = null;
+                                lobbyPlayers[data.toPos] = player;
+                                renderLobby();
+                                broadcastLobbyState();
+                            }
+                        }
+                        break;
+
+                    case 'startGame':
+                        // Host started the game
+                        if (!isHost) {
+                            playerNames = data.playerNames;
+                            hideModal();
+                        }
+                        break;
+
                     case 'gameState':
                         // Full game state sync from host
                         receiveGameState(data.state);
@@ -2089,6 +2428,42 @@
             }
 
             /**
+             * Start game from lobby (host only)
+             */
+            function startGameFromLobby() {
+                if (!isHost) return;
+
+                // Set up player names from lobby
+                for (const pos of POSITIONS) {
+                    if (lobbyPlayers[pos]) {
+                        playerNames[pos] = lobbyPlayers[pos].name;
+                    } else {
+                        playerNames[pos] = capitalize(pos) + ' (AI)';
+                    }
+                }
+
+                // Broadcast game start with player names
+                broadcast({ type: 'startGame', playerNames: playerNames });
+
+                // Update player area displays
+                updatePlayerAreaNames();
+
+                // Hide modal and start game
+                hideModal();
+                initGame();
+            }
+
+            /**
+             * Update player area displays with names
+             */
+            function updatePlayerAreaNames() {
+                document.querySelector('#player-south-area .player-name').textContent = playerNames.south;
+                document.querySelector('#player-north-area .player-name').textContent = playerNames.north;
+                document.querySelector('#player-east-area .player-name').textContent = playerNames.east;
+                document.querySelector('#player-west-area .player-name').textContent = playerNames.west;
+            }
+
+            /**
              * Reset to main menu
              */
             function backToMenu() {
@@ -2102,6 +2477,15 @@
                 isMultiplayer = false;
                 myPosition = 'south';
                 gameCode = '';
+                resetLobby();
+
+                // Reset player names
+                playerNames = {
+                    south: 'South',
+                    north: 'North',
+                    east: 'East',
+                    west: 'West'
+                };
 
                 showMainMenu();
             }
@@ -2170,9 +2554,12 @@
 
             // Play vs AI button
             document.getElementById('play-ai-btn').addEventListener('click', () => {
+                myName = nameInput.value.trim() || 'Player';
+                playerNames.south = myName;
                 isMultiplayer = false;
                 isHost = false;
                 myPosition = 'south';
+                updatePlayerAreaNames();
                 hideModal();
                 initGame();
             });
@@ -2186,11 +2573,23 @@
             // Connect to host button
             document.getElementById('join-connect-btn').addEventListener('click', connectToHost);
 
+            // Copy code button
+            document.getElementById('copy-code-btn').addEventListener('click', () => {
+                navigator.clipboard.writeText(gameCode).then(() => {
+                    const btn = document.getElementById('copy-code-btn');
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = 'Copy', 2000);
+                });
+            });
+
             // Copy link button
             document.getElementById('copy-link-btn').addEventListener('click', copyShareLink);
 
+            // Start game button (lobby)
+            document.getElementById('start-game-btn').addEventListener('click', startGameFromLobby);
+
             // Back buttons
-            document.getElementById('host-back-btn').addEventListener('click', backToMenu);
+            document.getElementById('lobby-back-btn').addEventListener('click', backToMenu);
             document.getElementById('join-back-btn').addEventListener('click', backToMenu);
 
             // --- START ---
