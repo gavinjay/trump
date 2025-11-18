@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trump (Court Piece)</title>
+    <!-- We'll use the 'Inter' font from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --table-green: #0a6c3a;
+            --table-green-dark: #074f2a;
+            --card-bg: #ffffff;
+            --card-border: #999;
+            --text-light: #f0f0f0;
+            --text-dark: #1a1a1a;
+            --suit-red: #d90000;
+            --suit-black: #1a1a1a;
+            --highlight-player: #ffeb3b;
+            --highlight-card: #00bfff;
+            --team-red: #ff5c5c; /* NEW */
+            --team-blue: #5c8cff; /* NEW */
+        }
+
+        /* Basic Setup */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #333;
+            color: var(--text-light);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            height: 100vh;
+            max-height: 700px;
+            background-color: var(--table-green);
+            border: 10px solid var(--table-green-dark);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 50px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Status Bar */
+        #status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-bottom: 2px solid var(--table-green-dark);
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        #status-bar > div {
+            flex: 1;
+        }
+
+        #score-display {
+            text-align: left;
+            display: flex; /* NEW */
+            flex-direction: column; /* NEW */
+            align-items: flex-start; /* NEW */
+            font-size: 0.9rem; /* NEW */
+            line-height: 1.3; /* NEW */
+        }
+
+        #score-display #hand-score { /* NEW */
+            font-weight: 400; /* NEW */
+            font-style: italic; /* NEW */
+            color: #ccc; /* NEW */
+        }
+
+        /* NEW: Team color text */
+        .team-red-text {
+            color: var(--team-red);
+            font-weight: 700;
+        }
+        .team-blue-text {
+            color: var(--team-blue);
+            font-weight: 700;
+        }
+
+        #trump-display {
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        #status-message {
+            text-align: right;
+            font-style: italic;
+            min-height: 1.2em;
+        }
+
+        /* Game Table Layout */
+        #game-table {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+        }
+
+        /* Player Positions */
+        .player-area {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+            min-width: 120px;
+            box-sizing: border-box;
+        }
+
+        .player-area.active-player {
+            box-shadow: 0 0 20px 5px var(--highlight-player);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .player-name {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+
+        .player-info {
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+
+        #player-south-area {
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            /* South's hand is separate */
+        }
+
+        #player-north-area {
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #player-west-area {
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+        }
+
+        #player-east-area {
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+        }
+
+        /* Card Styling */
+        .card, .card-back {
+            width: 60px;
+            height: 90px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            color: var(--text-dark);
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 4px;
+            box-sizing: border-box;
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+
+        .card-back {
+            background-color: #55a;
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.1) 75%, transparent 75%, transparent);
+            background-size: 20px 20px;
+        }
+
+        .card-rank {
+            line-height: 1;
+        }
+        .card-suit {
+            font-size: 1.5rem;
+            line-height: 1;
+            align-self: center;
+        }
+        .card-rank-bottom {
+            transform: rotate(180deg);
+        }
+
+        .card.suit-S, .card.suit-C { color: var(--suit-black); }
+        .card.suit-H, .card.suit-D { color: var(--suit-red); }
+
+        /* AI Player Hands */
+        .ai-hand {
+            display: flex;
+            position: relative;
+            margin-top: 5px;
+            height: 90px;
+        }
+        .ai-hand .card-back {
+            position: absolute;
+        }
+        #player-north-area .ai-hand .card-back {
+            left: calc(var(--i) * 15px);
+        }
+        #player-west-area .ai-hand, #player-east-area .ai-hand {
+            width: 60px;
+        }
+        #player-west-area .ai-hand .card-back,
+        #player-east-area .ai-hand .card-back {
+            top: calc(var(--i) * 10px);
+        }
+
+        /* Player's (South's) Hand */
+        #player-hand-south {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            height: 100px; /* Card height + hover room */
+            z-index: 100;
+        }
+
+        #player-hand-south .card {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+            bottom: 0;
+            /* FIX: Explicitly center the cards so fanning works from the middle */
+            left: 50%;
+            margin-left: -30px; /* Half of card width (60px) */
+        }
+
+        #player-hand-south .card:hover {
+            transform: translateY(-20px) scale(1.05);
+            z-index: 150;
+        }
+
+        #player-hand-south .card.playable {
+            box-shadow: 0 0 15px 3px var(--highlight-card);
+            border: 2px solid var(--highlight-card);
+        }
+
+        #player-hand-south .card.playable:hover {
+            transform: translateY(-20px) scale(1.1);
+        }
+
+        #player-hand-south .card.disabled {
+            filter: grayscale(80%) brightness(0.8);
+            cursor: not-allowed;
+        }
+
+        #player-hand-south .card.disabled:hover {
+            transform: none;
+        }
+
+        /* Trick Area (Center Table) */
+        #trick-area {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            /* REMOVED width/height */
+            transform: translate(-50%, -50%);
+            /* REMOVED grid properties */
+        }
+
+        #trick-area .card {
+            position: relative;
+            animation: play-card-anim 0.3s ease-out;
+        }
+
+        @keyframes play-card-anim {
+            from { opacity: 0; transform: scale(0.5) rotate(90deg); }
+            to { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+
+        /* NEW: Position all card slots absolutely */
+        #trick-card-south, #trick-card-north, #trick-card-west, #trick-card-east {
+            position: absolute;
+            transform: translate(-50%, -50%); /* Center the slot itself */
+        }
+
+        /* NEW: Tweak positions to be less centered */
+        #trick-card-south { top: 50px; } /* Was grid-area: south */
+        #trick-card-north { top: -50px; } /* Was grid-area: north */
+        #trick-card-west { left: -60px; } /* Was grid-area: west */
+        #trick-card-east { left: 60px; } /* Was grid-area: east */
+
+        /* Won Trick Stacks -- REMOVED */
+        /* .won-tricks-stack { ... } */
+        /* .won-tricks-stack .card-back { ... } */
+        /* .won-tricks-stack .card-back:nth-child(even) { ... } */
+
+
+        /* Modal Overlays */
+        #modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        #modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: #f4f4f4;
+            color: var(--text-dark);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            text-align: center;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+
+        #modal-overlay.visible .modal-content {
+            transform: scale(1);
+        }
+
+        /* NEW: Special style for trump select modal to keep hand visible */
+        #modal-overlay.trump-select {
+            background-color: rgba(0, 0, 0, 0.4); /* Lighter dim */
+            align-items: flex-start;
+        }
+
+        #modal-overlay.trump-select .modal-content {
+            margin-top: 15vh; /* Push down from top, leaving room for hand */
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            font-size: 1.8rem;
+        }
+
+        .modal-content p {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+        }
+
+        #trump-selection-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .trump-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            width: 80px;
+            height: 80px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .trump-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+
+        .trump-btn.suit-S, .trump-btn.suit-C { color: var(--suit-black); background-color: #eee; }
+        .trump-btn.suit-H, .trump-btn.suit-D { color: var(--suit-red); background-color: #fff0f0; }
+
+        #play-again-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--table-green-dark);
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        #play-again-btn:hover {
+            background-color: #0b8046;
+            transform: scale(1.05);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 700px) {
+            #game-container {
+                max-height: none;
+                height: 100vh;
+                border-radius: 0;
+                border: none;
+            }
+
+            .card, .card-back {
+                width: 50px;
+                height: 75px;
+                font-size: 1rem;
+            }
+            .card-suit { font-size: 1.2rem; }
+
+            #player-hand-south { /* <-- FIX: Was #player-hand */
+                height: 85px; /* Card height + hover room */
+            }
+
+            .player-area {
+                padding: 5px;
+                min-width: 90px;
+            }
+            .player-name { font-size: 0.9rem; }
+            .player-info { font-size: 0.7rem; }
+
+            #player-west-area .ai-hand, #player-east-area .ai-hand {
+                width: 50px;
+            }
+            .ai-hand { height: 75px; }
+
+            #trick-area {
+                /* REMOVED width/height */
+            }
+
+            /* Won Stacks Responsive -- REMOVED */
+            /* .won-tricks-stack { ... } */
+            /* .won-tricks-stack .card-back { ... } */
+            /* #won-tricks-north { ... } */
+            /* #won-tricks-south { ... } */
+            /* #won-tricks-west { ... } */
+            /* #won-tricks-east { ... } */
+
+            /* NEW: Adjust trick positions for smaller screen */
+            #trick-card-south { top: 45px; }
+            #trick-card-north { top: -45px; }
+            #trick-card-west { left: -45px; }
+            #trick-card-east { left: 45px; }
+
+            #status-bar {
+                font-size: 0.8rem;
+                padding: 8px 10px;
+            }
+            #trump-display { font-size: 1rem; }
+
+            .modal-content {
+                padding: 20px;
+                width: 85%;
+            }
+            .modal-content h2 { font-size: 1.5rem; }
+            .modal-content p { font-size: 1rem; }
+            .trump-btn {
+                font-size: 2rem;
+                width: 60px;
+                height: 60px;
+            }
+        }
+
+        @media (max-height: 500px) {
+             #player-hand-south {
+                bottom: 5px;
+                height: 80px;
+            }
+            #player-hand-south .card:hover {
+                transform: translateY(-10px) scale(1.05);
+            }
+            #player-hand-south .card.playable:hover {
+                transform: translateY(-10px) scale(1.1);
+            }
+            #player-south-area {
+                display: none; /* Hide the area, just show the hand */
+            }
+            /* REMOVED #won-tricks-south */
+        }
+
+        /* NEW: Special Event Overlay (Ace Catch King) */
+        #special-event-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 500; /* Above everything but modal */
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+            pointer-events: none;
+        }
+
+        #special-event-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #special-event-message {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--highlight-player);
+            text-align: center;
+            text-shadow: 0 0 20px #000;
+            transform: scale(0.7);
+            transition: all 0.5s ease;
+            white-space: pre-wrap; /* To allow line breaks */
+        }
+
+        #special-event-overlay.visible #special-event-message {
+            transform: scale(1);
+        }
+
+        @media (max-width: 700px) {
+            #special-event-message {
+                font-size: 2.5rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- Top Status Bar -->
+        <div id="status-bar">
+            <!-- UPDATED score-display -->
+            <div id="score-display">
+                <!-- UPDATED: Color-coded score -->
+                <span id="game-score">Games: <span id="game-score-red" class="team-red-text">0</span> - <span id="game-score-blue" class="team-blue-text">0</span></span>
+                <span id="hand-score">Hands: <span id="hand-score-red" class="team-red-text">0</span> - <span id="hand-score-blue" class="team-blue-text">0</span></span>
+            </div>
+            <div id="trump-display"></div>
+            <div id="status-message">Starting new game...</div>
+        </div>
+
+        <!-- Main Game Table -->
+        <div id="game-table">
+            <!-- AI Player North -->
+            <div class="player-area" id="player-north-area">
+                <div class="player-name">North (AI)</div>
+                <!-- UPDATED: Team Red -->
+                <div class="player-info"><span class="team-red-text">Team Red</span> | <span id="card-count-north">0</span> cards</div>
+                <div class="ai-hand" id="ai-hand-north"></div>
+            </div>
+
+            <!-- AI Player West -->
+            <div class="player-area" id="player-west-area">
+                <div class="player-name">West (AI)</div>
+                <!-- UPDATED: Team Blue -->
+                <div class="player-info"><span class="team-blue-text">Team Blue</span> | <span id="card-count-west">0</span> cards</div>
+                <div class="ai-hand" id="ai-hand-west"></div>
+            </div>
+
+            <!-- AI Player East -->
+            <div class="player-area" id="player-east-area">
+                <div class="player-name">East (AI)</div>
+                <!-- UPDATED: Team Blue -->
+                <div class="player-info"><span class="team-blue-text">Team Blue</span> | <span id="card-count-east">0</span> cards</div>
+                <div class="ai-hand" id="ai-hand-east"></div>
+            </div>
+
+            <!-- Human Player South Area (Name/Info) -->
+            <div class="player-area" id="player-south-area">
+                <div class="player-name">South (You)</div>
+                <!-- UPDATED: Team Red -->
+                <div class="player-info"><span class="team-red-text">Team Red</span> | <span id="card-count-south">0</span> cards</div>
+            </div>
+
+            <!-- Won trick stacks -- REMOVED -->
+            <!-- <div class="won-tricks-stack" id="won-tricks-north"></div> ... -->
+
+            <!-- Center Trick Area -->
+            <div id="trick-area">
+                <div id="trick-card-north"></div>
+                <div id="trick-card-west"></div>
+                <div id="trick-card-east"></div>
+                <div id="trick-card-south"></div>
+            </div>
+
+        </div>
+
+        <!-- Human Player's Hand (Cards) -->
+        <div id="player-hand-south">
+            <!-- Player's cards will be dynamically inserted here -->
+        </div>
+
+        <!-- Modal Overlays -->
+        <div id="modal-overlay">
+            <!-- Trump Selection Modal -->
+            <div id="trump-selection-modal" class="modal-content" style="display: none;">
+                <h2 id="trump-modal-title">Select Trump Suit</h2>
+                <p id="trump-modal-text">Select the trump suit for this hand.</p>
+                <div id="trump-selection-buttons">
+                    <button class="trump-btn suit-S" data-suit="S">♠</button>
+                    <button class="trump-btn suit-H" data-suit="H">♥</button>
+                    <button class="trump-btn suit-D" data-suit="D">♦</button>
+                    <button class="trump-btn suit-C" data-suit="C">♣</button>
+                </div>
+            </div>
+
+            <!-- Game Over Modal -->
+            <div id="game-over-modal" class="modal-content" style="display: none;">
+                <h2 id="game-over-title">Game Over</h2>
+                <p id="game-over-message">Team A wins!</p>
+                <button id="play-again-btn">Play Again</button>
+            </div>
+        </div>
+
+        <!-- NEW Special Event Overlay -->
+        <div id="special-event-overlay">
+            <div id="special-event-message"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- CONSTANTS ---
+            const SUITS = ['S', 'H', 'D', 'C'];
+            const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+            const POSITIONS = ['south', 'east', 'north', 'west']; // Counter-clockwise
+            const RANK_VALUES = {
+                '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+                'J': 11, 'Q': 12, 'K': 13, 'A': 14
+            };
+            const AI_THINK_TIME = 1000; // ms
+
+            // --- DOM ELEMENTS ---
+            const gameContainer = document.getElementById('game-container');
+            const statusBar = {
+                score: document.getElementById('score-display'),
+                gameScore: document.getElementById('game-score'), // Original text span
+                handScore: document.getElementById('hand-score'), // Original text span
+                gameScoreRed: document.getElementById('game-score-red'), // NEW
+                gameScoreBlue: document.getElementById('game-score-blue'), // NEW
+                handScoreRed: document.getElementById('hand-score-red'), // NEW
+                handScoreBlue: document.getElementById('hand-score-blue'), // NEW
+                trump: document.getElementById('trump-display'),
+                message: document.getElementById('status-message'),
+            };
+            const playerAreas = {
+                south: document.getElementById('player-south-area'),
+                north: document.getElementById('player-north-area'),
+                west: document.getElementById('player-west-area'),
+                east: document.getElementById('player-east-area'),
+            };
+            const playerHands = {
+                south: document.getElementById('player-hand-south'),
+                north: document.getElementById('ai-hand-north'),
+                west: document.getElementById('ai-hand-west'),
+                east: document.getElementById('ai-hand-east'),
+            };
+            const cardCounts = {
+                south: document.getElementById('card-count-south'),
+                north: document.getElementById('card-count-north'),
+                west: document.getElementById('card-count-west'),
+                east: document.getElementById('card-count-east'),
+            };
+            const trickArea = document.getElementById('trick-area');
+            const trickCards = {
+                south: document.getElementById('trick-card-south'),
+                north: document.getElementById('trick-card-north'),
+                west: document.getElementById('trick-card-west'),
+                east: document.getElementById('trick-card-east'),
+            };
+            // REMOVED wonTricksStacks
+            const modalOverlay = document.getElementById('modal-overlay');
+            const trumpModal = document.getElementById('trump-selection-modal');
+            const trumpButtons = document.getElementById('trump-selection-buttons');
+            const gameOverModal = document.getElementById('game-over-modal');
+            const playAgainBtn = document.getElementById('play-again-btn');
+            const specialEventOverlay = document.getElementById('special-event-overlay'); // NEW
+            const specialEventMessage = document.getElementById('special-event-message'); // NEW
+
+            // --- GAME STATE ---
+            let deck = [];
+            let players = {};
+            let scores = { teamRed: 0, teamBlue: 0 }; // UPDATED: teamA/B -> teamRed/Blue
+            let currentTrick = []; // { player, card } objects
+            let trumpSuit = null;
+            let trumpCaller = 'south';
+            let trickLeader = 'south';
+            let currentPlayer = 'south';
+            let handTrickCounts = { teamRed: 0, teamBlue: 0 }; // UPDATED: teamA/B -> teamRed/Blue
+            // REMOVED playerTrickCounts
+            let gameState = 'INIT'; // INIT, DEALING, TRUMP_SELECTION, PLAYING, TRICK_OVER, HAND_OVER, GAME_OVER
+
+            // --- CORE GAME LOGIC ---
+
+            /**
+             * Initializes a new game from scratch. Resets scores.
+             */
+            function initGame() {
+                console.log("Initializing new game...");
+                scores = { teamRed: 0, teamBlue: 0 }; // UPDATED
+                trumpCaller = 'south'; // South calls trump first
+                gameState = 'TRUMP_SELECTION'; // Changed: Start with trump selection
+                currentPlayer = trumpCaller; // The caller is the current player
+                trumpSuit = null; // Reset trump for the new game
+                trickLeader = null; // Will be set by setTrump
+                hideModal();
+
+                // --- Deal 5 cards for trump selection ---
+                deck = createDeck();
+                shuffleDeck(deck);
+                players = {
+                    south: { hand: [], isAI: false, team: 'teamRed' }, // UPDATED
+                    east: { hand: [], isAI: true, team: 'teamBlue' }, // UPDATED
+                    north: { hand: [], isAI: true, team: 'teamRed' }, // UPDATED
+                    west: { hand: [], isAI: true, team: 'teamBlue' }, // UPDATED
+                };
+                currentTrick = [];
+                handTrickCounts = { teamRed: 0, teamBlue: 0 }; // UPDATED
+                // REMOVED playerTrickCounts
+
+                updateStatusMessage('Dealing initial cards...');
+                updateScoreDisplay();
+                updateHandScoreDisplay(); // NEW
+                updateTrumpDisplay();
+                clearTrickArea();
+                // REMOVED clearWonTricksDisplay();
+
+                // 1. Deal 5 cards to each player
+                for (let i = 0; i < 5; i++) {
+                    for (const pos of POSITIONS) {
+                        players[pos].hand.push(deck.pop());
+                    }
+                }
+
+                sortHand(players.south.hand);
+                renderAllHands(); // Show the 5 cards
+
+                // 2. Go to trump selection
+                setTimeout(() => {
+                    promptForTrump();
+                }, 500);
+            }
+
+            /**
+             * Starts a new hand (one round of 13 tricks).
+             */
+            function startNewHand() {
+                console.log(`--- Starting New Hand ---`);
+                gameState = 'DEALING';
+
+                // Reset hands and deck
+                deck = createDeck();
+                shuffleDeck(deck);
+                players = {
+                    south: { hand: [], isAI: false, team: 'teamRed' }, // UPDATED
+                    east: { hand: [], isAI: true, team: 'teamBlue' }, // UPDATED
+                    north: { hand: [], isAI: true, team: 'teamRed' }, // UPDATED
+                    west: { hand: [], isAI: true, team: 'teamBlue' }, // UPDATED
+                };
+
+                // Reset trick data
+                currentTrick = [];
+                handTrickCounts = { teamRed: 0, teamBlue: 0 }; // UPDATED
+                // REMOVED playerTrickCounts
+                // --- TRUMP SUIT IS NOT RESET ---
+
+                // trickLeader is set by setTrump (for hand 1) or endTrick (for others)
+                currentPlayer = trickLeader;
+
+                updateStatusMessage('Dealing cards...');
+                updateScoreDisplay();
+                updateHandScoreDisplay(); // NEW
+                updateTrumpDisplay(); // Show the game-wide trump
+                clearTrickArea();
+                // REMOVED clearWonTricksDisplay();
+
+                // 1. Deal 13 cards to each player
+                for (let i = 0; i < 13; i++) {
+                    for (const pos of POSITIONS) {
+                        if (deck.length > 0) { // Safety check
+                           players[pos].hand.push(deck.pop());
+                        }
+                    }
+                }
+
+                sortHand(players.south.hand);
+                renderAllHands();
+
+                // 2. Start first trick
+                gameState = 'PLAYING'; // <-- FIX: Set to PLAYING *before* calling nextTurn
+                setTimeout(() => {
+                    updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. ${capitalize(trickLeader)} starts.`);
+                    nextTurn();
+                }, 1000);
+            }
+
+            /**
+             * Creates a standard 52-card deck.
+             */
+            function createDeck() {
+                const newDeck = [];
+                SUITS.forEach(suit => {
+                    RANKS.forEach(rank => {
+                        newDeck.push({
+                            suit: suit,
+                            rank: rank,
+                            value: RANK_VALUES[rank],
+                            id: `${rank}-${suit}` // Unique ID for DOM
+                        });
+                    });
+                });
+                return newDeck;
+            }
+
+            /**
+             * Shuffles a deck array in place (Fisher-Yates).
+             */
+            function shuffleDeck(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            /**
+             * Sorts a player's hand by suit, then rank.
+             * NEW: Sorts trump suit to the far right.
+             */
+             function sortHand(hand) {
+                const suitOrder = { 'S': 1, 'H': 2, 'D': 3, 'C': 4 };
+
+                hand.sort((a, b) => {
+                    // Check if trumpSuit is set
+                    if (trumpSuit) {
+                        const aIsTrump = a.suit === trumpSuit;
+                        const bIsTrump = b.suit === trumpSuit;
+
+                        if (aIsTrump && !bIsTrump) {
+                            return 1; // a is trump, b is not -> a comes after b
+                        }
+                        if (!aIsTrump && bIsTrump) {
+                            return -1; // b is trump, a is not -> a comes before b
+                        }
+                    }
+
+                    // If both are trump or both are not (or trump isn't set), sort normally
+                    if (a.suit !== b.suit) {
+                        return suitOrder[a.suit] - suitOrder[b.suit];
+                    }
+                    return a.value - b.value;
+                });
+            }
+
+            /**
+             * Asks the current trump caller to select trump.
+             */
+            function promptForTrump() {
+                console.log(`Prompting ${currentPlayer} for trump.`);
+                updateStatusMessage(`${capitalize(currentPlayer)} is selecting trump...`);
+                highlightActivePlayer(currentPlayer);
+
+                if (currentPlayer === 'south') {
+                    // Show modal for human player
+                    document.getElementById('trump-modal-title').textContent = "Select Trump Suit";
+                    document.getElementById('trump-modal-text').textContent = "Select the trump suit for this hand.";
+                    trumpModal.style.display = 'block';
+                    gameOverModal.style.display = 'none';
+                    showModal();
+                    modalOverlay.classList.add('trump-select'); // NEW: Special class
+                } else {
+                    // AI selects trump
+                    setTimeout(() => {
+                        const aiHand = players[currentPlayer].hand;
+                        const chosenSuit = aiSelectTrump(aiHand);
+                        setTrump(chosenSuit);
+                    }, AI_THINK_TIME * 1.5);
+                }
+            }
+
+            /**
+             * AI logic for selecting a trump suit from 5 cards.
+             */
+            function aiSelectTrump(hand) {
+                const suitCounts = { S: 0, H: 0, D: 0, C: 0 };
+                let bestSuit = SUITS[Math.floor(Math.random() * 4)]; // Default random
+                let maxCount = 0;
+
+                hand.forEach(card => {
+                    suitCounts[card.suit]++;
+                });
+
+                for (const suit in suitCounts) {
+                    if (suitCounts[suit] > maxCount) {
+                        maxCount = suitCounts[suit];
+                        bestSuit = suit;
+                    }
+                }
+                console.log(`AI (${currentPlayer}) chose trump: ${bestSuit} (had ${maxCount})`);
+                return bestSuit;
+            }
+
+            /**
+             * Sets the trump suit, deals remaining cards, and starts play.
+             */
+            function setTrump(suit) {
+                console.log(`Trump set to: ${suit}`);
+                trumpSuit = suit; // This is now set for the whole game
+                trickLeader = trumpCaller; // The caller leads the first trick
+                currentPlayer = trumpCaller;
+
+                hideModal();
+                modalOverlay.classList.remove('trump-select'); // NEW: Clean up
+                updateTrumpDisplay();
+                updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. Dealing remaining cards...`);
+
+                // 3. Deal remaining 8 cards (to add to the 5)
+                for (let i = 0; i < 8; i++) {
+                    for (const pos of POSITIONS) {
+                        if (deck.length > 0) { // Safety check
+                            players[pos].hand.push(deck.pop());
+                        }
+                    }
+                }
+
+                // Re-sort human hand with all 13 cards
+                sortHand(players.south.hand);
+                renderAllHands();
+
+                // 4. Start first trick
+                gameState = 'PLAYING'; // <-- FIX: Set to PLAYING *now*
+                setTimeout(() => {
+                    updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. ${capitalize(trickLeader)} starts.`);
+                    nextTurn(); // <-- FIX: Call nextTurn directly
+                }, 1000);
+            }
+
+            /**
+             * Manages the flow of the game, passing control to the next player.
+             */
+            function nextTurn() {
+                if (gameState !== 'PLAYING') return;
+
+                console.log(`Turn: ${currentPlayer}`);
+                highlightActivePlayer(currentPlayer);
+
+                if (currentPlayer === 'south') {
+                    // Human player's turn
+                    updateStatusMessage("Your turn. Select a card to play.");
+                    highlightPlayableCards();
+                } else {
+                    // AI player's turn
+                    updateStatusMessage(`${capitalize(currentPlayer)}'s turn...`);
+                    setTimeout(aiPlayCard, AI_THINK_TIME);
+                }
+            }
+
+            /**
+             * AI logic for playing a card.
+             */
+            function aiPlayCard() {
+                if (gameState !== 'PLAYING' || players[currentPlayer].isAI === false) return;
+
+                const player = currentPlayer;
+                const hand = players[player].hand;
+                const ledSuit = currentTrick.length > 0 ? currentTrick[0].card.suit : null;
+                const playableCards = getPlayableCards(hand, ledSuit);
+
+                // --- Simple AI Strategy ---
+                let cardToPlay = null;
+
+                // Get info about the trick
+                const winningEntry = currentTrick.length > 0 ? findWinningTrickEntry(currentTrick, trumpSuit) : null;
+                const isPartnerWinning = winningEntry && players[winningEntry.player].team === players[player].team;
+
+                if (ledSuit) {
+                    // --- Following suit ---
+                    if (playableCards[0].suit === ledSuit) {
+                        // Must follow suit.
+                        if (isPartnerWinning) {
+                             // Partner is winning, play lowest card.
+                            cardToPlay = playableCards[0]; // Already sorted low to high
+                        } else {
+                            // Partner not winning (or we are leading). Try to win.
+                            const winningValue = winningEntry ? winningEntry.card.value : 0;
+                            // Find smallest card that can win
+                            let bestCard = playableCards.find(c => c.value > winningValue);
+                            if (bestCard) {
+                                cardToPlay = bestCard;
+                            } else {
+                                // Can't win, play lowest card.
+                                cardToPlay = playableCards[0];
+                            }
+                        }
+                    } else {
+                        // --- Can't follow suit ---
+                        const trumpCards = playableCards.filter(c => c.suit === trumpSuit);
+                        const nonTrumpCards = playableCards.filter(c => c.suit !== trumpSuit);
+
+                        if (isPartnerWinning) {
+                            // "Walk aside". Play lowest non-trump card if possible.
+                            if (nonTrumpCards.length > 0) {
+                                cardToPlay = nonTrumpCards[0];
+                            } else {
+                                // Forced to play trump, play lowest.
+                                cardToPlay = trumpCards[0];
+                            }
+                        } else {
+                            // Try to "cut" (trump). Play lowest trump if possible.
+                            if (trumpCards.length > 0) {
+                                cardToPlay = trumpCards[0];
+                            } else {
+                                // No trump, just "walk aside". Play lowest card.
+                                cardToPlay = nonTrumpCards[0];
+                            }
+                        }
+                    }
+                } else {
+                    // --- Leading the trick ---
+                    // Simple: lead a random high non-trump card if possible.
+                    const nonTrumps = hand.filter(c => c.suit !== trumpSuit);
+                    if (nonTrumps.length > 0) {
+                        // Sort high to low
+                        nonTrumps.sort((a, b) => b.value - a.value);
+                        cardToPlay = nonTrumps[0]; // Play highest non-trump
+                    } else {
+                        // Only have trump, play lowest.
+                        hand.sort((a, b) => a.value - b.value);
+                        cardToPlay = hand[0];
+                    }
+                }
+
+                // Fallback: just play a random playable card
+                if (!cardToPlay) {
+                    cardToPlay = playableCards[Math.floor(Math.random() * playableCards.length)];
+                }
+
+                // --- End AI Strategy ---
+
+                // Find the card in the actual hand to remove it
+                const cardIndex = hand.findIndex(c => c.id === cardToPlay.id);
+                const card = hand.splice(cardIndex, 1)[0];
+
+                playCard(player, card);
+            }
+
+            /**
+             * Processes a card being played by any player.
+             */
+            function playCard(player, card) {
+                console.log(`${player} plays: ${card.id}`);
+                gameState = 'CARD_PLAYED'; // Temp state to prevent clicks
+
+                // Add to trick
+                currentTrick.push({ player, card });
+
+                // Update UI
+                renderPlayedCard(player, card);
+                renderAllHands();
+
+                // --- Check for "Ace Catch King" ---
+                const kingOfTrump = currentTrick.find(c => c.card.suit === trumpSuit && c.card.rank === 'K');
+                const aceOfTrump = currentTrick.find(c => c.card.suit === trumpSuit && c.card.rank === 'A');
+
+                if (kingOfTrump && aceOfTrump) {
+                    const kingIndex = currentTrick.indexOf(kingOfTrump);
+                    const aceIndex = currentTrick.indexOf(aceOfTrump);
+
+                    if (aceIndex > kingIndex) {
+                        // Ace was played AFTER the King!
+                        const winner = aceOfTrump.player; // NEW
+                        const winnerTeam = players[winner].team;
+                        console.log(`!!! ACE CATCH KING by ${winner} !!!`);
+
+                        // --- NEW ---
+                        const winnerName = (winnerTeam === 'teamRed') ? "Team Red" : "Team Blue"; // UPDATED
+                        showSpecialEventMessage(`ACE CATCH KING!\n${winnerName} wins!`);
+
+                        // Delay the game-over modal to let the message be seen
+                        setTimeout(() => {
+                            showGameOver(winnerTeam, "Ace Catch King!");
+                        }, 2800);
+                        // --- END NEW ---
+
+                        return; // Stop the game
+                    }
+                }
+                // --- End Ace/King Check ---
+
+                // Check if trick is over
+                if (currentTrick.length === 4) {
+                    gameState = 'TRICK_OVER';
+                    highlightActivePlayer(null);
+                    setTimeout(endTrick, AI_THINK_TIME * 1.5); // Pause to see cards
+                } else {
+                    gameState = 'PLAYING';
+                    currentPlayer = getNextPlayer(player);
+                    nextTurn();
+                }
+            }
+
+            /**
+             * Called when all 4 cards are in the trick.
+             */
+            function endTrick() {
+                if (gameState !== 'TRICK_OVER') return;
+
+                const winningEntry = findWinningTrickEntry(currentTrick, trumpSuit);
+                const winner = winningEntry.player;
+                const winnerTeam = players[winner].team;
+
+                handTrickCounts[winnerTeam]++;
+                // REMOVED playerTrickCounts[winner]++;
+                trickLeader = winner; // Winner leads next trick
+                currentPlayer = winner;
+
+                console.log(`Trick over. Winner: ${winner} (${winnerTeam}).`);
+                updateStatusMessage(`${capitalize(winner)} wins the hand!`); // UPDATED: trick -> hand
+                updateHandScoreDisplay(); // NEW
+
+                // REMOVED addCardToWonStack(winner);
+
+                // --- NEW: Check for hand-ending trick ---
+                if (handTrickCounts[winnerTeam] === 7) {
+                    gameState = 'HAND_OVER';
+                    console.log(`Hand over. ${winnerTeam} won 7 tricks.`);
+                    updateStatusMessage(`${capitalize(winnerTeam)} wins the round!`); // UPDATED: hand -> round
+
+                    // Call endHand, but force the winner
+                    setTimeout(() => endHand(winnerTeam), AI_THINK_TIME * 2); // Pass winner
+                    return; // Don't continue to clear trick or start next turn
+                }
+                // --- End new check ---
+
+                // Clear trick area after a delay
+                setTimeout(() => {
+                    currentTrick = [];
+                    clearTrickArea();
+
+                    // Check if hand is over (no cards left)
+                    if (players.south.hand.length === 0) {
+                        gameState = 'HAND_OVER';
+                        endHand(); // No parameter, will tally score
+                    } else {
+                        gameState = 'PLAYING';
+                        updateStatusMessage(`${capitalize(currentPlayer)} leads next hand.`); // UPDATED: trick -> hand
+                        nextTurn();
+                    }
+                }, AI_THINK_TIME);
+            }
+
+            /**
+             * Called when all 13 tricks are played OR one team wins 7 tricks.
+             * @param {string} [forcedWinnerTeam] - If provided, this team wins the hand.
+                 */
+            function endHand(forcedWinnerTeam) {
+                console.log("Hand over.");
+
+                let handWinner = forcedWinnerTeam;
+                let message = '';
+
+                if (!handWinner) {
+                    // Hand played all 13 tricks, determine winner
+                    const teamRed = handTrickCounts.teamRed; // UPDATED
+                    const teamBlue = handTrickCounts.teamBlue; // UPDATED
+                    message = `Round over! Hands: Team Red (${teamRed}) - Team Blue (${teamBlue}). `; // UPDATED
+
+                    if (teamRed > teamBlue) { // UPDATED
+                        handWinner = 'teamRed'; // UPDATED
+                    } else {
+                        handWinner = 'teamBlue'; // UPDATED
+                    }
+                }
+
+                if (handWinner === 'teamRed') { // UPDATED
+                    scores.teamRed++; // UPDATED
+                    message += "Team Red wins the round!"; // UPDATED
+                } else {
+                    scores.teamBlue++; // UPDATED
+                    message += "Team Blue wins the round!"; // UPDATED
+                }
+
+                console.log(message);
+                updateStatusMessage(message);
+                updateScoreDisplay();
+
+                // Check for game over
+                if (scores.teamRed === 7 || scores.teamBlue === 7) { // UPDATED
+                    const gameWinner = scores.teamRed === 7 ? 'teamRed' : 'teamBlue'; // UPDATED
+                    showGameOver(gameWinner, "Reached 7 points!");
+                } else {
+                    // Start next hand
+                    // --- REMOVED TRUMP CALLER ROTATION ---
+                    setTimeout(startNewHand, 3000); // Pause before next hand
+                }
+            }
+
+            /**
+             * Displays the game over modal.
+             */
+            function showGameOver(winningTeam, message) {
+                console.log(`Game Over. Winner: ${winningTeam}. Message: ${message}`);
+                gameState = 'GAME_OVER';
+
+                const winnerName = (winningTeam === 'teamRed') ? "Team Red (You & North)" : "Team Blue (East & West)"; // UPDATED
+
+                document.getElementById('game-over-title').textContent = "Game Over!";
+                document.getElementById('game-over-message').textContent = `${winnerName} wins the game! (${message})`;
+
+                trumpModal.style.display = 'none';
+                gameOverModal.style.display = 'block';
+                modalOverlay.classList.remove('trump-select'); // Clean up
+                showModal();
+            }
+
+            // --- HELPER & UTILITY FUNCTIONS ---
+
+            /**
+             * Gets playable cards from a hand.
+             * @param {array} hand - The player's hand.
+             * @param {string} ledSuit - The suit that was led.
+             * @returns {array} - An array of playable card objects, sorted low to high.
+             */
+            function getPlayableCards(hand, ledSuit) {
+                let playable = [];
+                if (!ledSuit) {
+                    // Leading, all cards are playable
+                    playable = [...hand];
+                } else {
+                    // Must follow suit
+                    const cardsOfLedSuit = hand.filter(c => c.suit === ledSuit);
+                    if (cardsOfLedSuit.length > 0) {
+                        playable = cardsOfLedSuit;
+                    } else {
+                        // Can't follow suit, all cards are playable
+                        playable = [...hand];
+                    }
+                }
+                // Sort low to high
+                playable.sort((a, b) => a.value - b.value);
+                return playable;
+            }
+
+            /**
+             * Finds the winning card entry from a completed trick.
+             */
+            function findWinningTrickEntry(trick, trump) {
+                if (!trick || trick.length === 0) {
+                    return null; // Handle empty trick
+                }
+
+                let winningEntry = trick[0];
+                const ledSuit = winningEntry.card.suit;
+
+                for (let i = 1; i < trick.length; i++) {
+                    const currentEntry = trick[i];
+                    const winningCard = winningEntry.card;
+                    const currentCard = currentEntry.card;
+
+                    if (currentCard.suit === winningCard.suit) {
+                        // Same suit, higher rank wins
+                        if (currentCard.value > winningCard.value) {
+                            winningEntry = currentEntry;
+                        }
+                    } else if (currentCard.suit === trump) {
+                        // Current card is trump
+                        if (winningCard.suit !== trump) {
+                            // ...and winning card is not, so current wins
+                            winningEntry = currentEntry;
+                        } else {
+                            // ...and winning card is also trump, higher rank wins
+                            if (currentCard.value > winningCard.value) {
+                                winningEntry = currentEntry;
+                            }
+                        }
+                    }
+                    // Otherwise (current is not trump and not led suit), it can't win
+                }
+                return winningEntry;
+            }
+
+            function getNextPlayer(player) {
+                const currentIndex = POSITIONS.indexOf(player);
+                return POSITIONS[(currentIndex + 1) % 4];
+            }
+
+            function getSuitSymbol(suit) {
+                if (!suit) return '';
+                return { S: '♠', H: '♥', D: '♦', C: '♣' }[suit];
+            }
+
+            function getRankSymbol(rank) {
+                return rank; // '10' is already correct
+            }
+
+            function capitalize(str) {
+                return str.charAt(0).toUpperCase() + str.slice(1);
+            }
+
+            // --- UI / RENDERING FUNCTIONS ---
+
+            /**
+             * Renders all player hands (human's cards, AI's card backs).
+             */
+            function renderAllHands() {
+                POSITIONS.forEach(pos => {
+                    const hand = players[pos].hand;
+                    const handEl = playerHands[pos];
+                    const countEl = cardCounts[pos];
+
+                    handEl.innerHTML = '';
+                    countEl.textContent = hand.length;
+
+                    if (pos === 'south') {
+                        // Render human player's hand
+                        const totalCards = hand.length;
+
+                        // --- FIX: Use wider spacing for small hands so they don't overlap ---
+                        // 65px for small hands (side-by-side), 35px for full hands (overlapped)
+                        const cardSlotWidth = totalCards <= 5 ? 65 : 35;
+                        const spreadWidth = Math.min((totalCards - 1) * cardSlotWidth, gameContainer.clientWidth * 0.8);
+                        // --- End Fix ---
+
+                        const startOffset = -spreadWidth / 2;
+
+                        hand.forEach((card, i) => {
+                            const cardEl = createCardElement(card);
+                            const offset = startOffset + (i / (totalCards - 1 || 1)) * spreadWidth;
+                            cardEl.style.transform = `translateX(${offset}px) rotate(${((i / (totalCards - 1)) - 0.5) * 10}deg)`;
+                            cardEl.style.zIndex = i;
+                            cardEl.dataset.cardId = card.id;
+                            handEl.appendChild(cardEl);
+                        });
+                    } else {
+                        // Render AI players' card backs
+                        hand.forEach((card, i) => {
+                            const cardBackEl = document.createElement('div');
+                            cardBackEl.className = 'card-back';
+                            cardBackEl.style.setProperty('--i', i);
+                            handEl.appendChild(cardBackEl);
+                        });
+                    }
+                });
+            }
+
+            /**
+             * Creates the DOM element for a single card face.
+             */
+            function createCardElement(card) {
+                const el = document.createElement('div');
+                el.className = `card suit-${card.suit}`;
+                const rank = getRankSymbol(card.rank);
+                const suit = getSuitSymbol(card.suit);
+                el.innerHTML = `
+                    <div class="card-rank">${rank}</div>
+                    <div class="card-suit">${suit}</div>
+                    <div class="card-rank card-rank-bottom">${rank}</div>
+                `;
+                return el;
+            }
+
+            /**
+             * Renders a card played into the center trick area.
+             */
+             function renderPlayedCard(player, card) {
+                const cardEl = createCardElement(card);
+                const slotEl = trickCards[player];
+                slotEl.innerHTML = '';
+                slotEl.appendChild(cardEl);
+             }
+
+            /**
+             * NEW: Adds a card-back to the winner's stack.
+             */
+            /* REMOVED addCardToWonStack function */
+
+            /**
+             * NEW: Highlights playable cards in the human player's hand.
+             */
+            function highlightPlayableCards() {
+                if (currentPlayer !== 'south') return;
+
+                const hand = players.south.hand;
+                const ledSuit = currentTrick.length > 0 ? currentTrick[0].card.suit : null;
+
+                // Get the actual playable card objects
+                const playableCards = getPlayableCards(hand, ledSuit);
+                const playableCardIds = new Set(playableCards.map(c => c.id));
+
+                const handCardElements = playerHands.south.querySelectorAll('.card');
+
+                handCardElements.forEach(cardEl => {
+                    const cardId = cardEl.dataset.cardId;
+                    if (playableCardIds.has(cardId)) {
+                        cardEl.classList.add('playable');
+                        cardEl.classList.remove('disabled');
+                    } else {
+                        cardEl.classList.add('disabled');
+                        cardEl.classList.remove('playable');
+                    }
+                });
+            }
+
+            /**
+             * Clears the center trick area.
+             */
+            function clearTrickArea() {
+                for (const pos in trickCards) {
+                    trickCards[pos].innerHTML = '';
+                }
+            }
+
+            /**
+             * NEW: Clears the visual won trick stacks.
+             */
+            /* REMOVED clearWonTricksDisplay function */
+
+            function updateStatusMessage(msg) {
+                statusBar.message.textContent = msg;
+            }
+
+            function updateScoreDisplay() {
+                // UPDATED: Set color-coded scores
+                statusBar.gameScoreRed.textContent = scores.teamRed;
+                statusBar.gameScoreBlue.textContent = scores.teamBlue;
+            }
+
+            /**
+             * NEW: Updates the hand score display
+             */
+            function updateHandScoreDisplay() {
+                if (statusBar.handScoreRed) { // Add check just in case
+                    // UPDATED: Set color-coded scores
+                    statusBar.handScoreRed.textContent = handTrickCounts.teamRed;
+                    statusBar.handScoreBlue.textContent = handTrickCounts.teamBlue;
+                }
+            }
+
+            function updateTrumpDisplay() {
+                if (trumpSuit) {
+                    const suit = getSuitSymbol(trumpSuit);
+                    statusBar.trump.innerHTML = `Trump: <span class="suit-${trumpSuit}">${suit}</span>`;
+                } else {
+                    statusBar.trump.innerHTML = 'Selecting Trump...';
+                }
+            }
+
+            function highlightActivePlayer(player) {
+                POSITIONS.forEach(pos => {
+                   playerAreas[pos].classList.toggle('active-player', pos === player);
+                });
+            }
+
+            function showModal() {
+                modalOverlay.classList.add('visible');
+            }
+
+            function hideModal() {
+                modalOverlay.classList.remove('visible');
+                modalOverlay.classList.remove('trump-select'); // NEW: Clean up just in case
+            }
+
+            /**
+             * NEW: Shows a temporary full-screen message for special events.
+             */
+            function showSpecialEventMessage(message) {
+                specialEventMessage.textContent = message;
+                specialEventOverlay.classList.add('visible');
+
+                // Hide it after a delay
+                setTimeout(() => {
+                     specialEventOverlay.classList.remove('visible');
+                }, 2500); // Show for 2.5 seconds
+            }
+
+            // --- EVENT LISTENERS ---
+
+            // Trump selection buttons
+            trumpButtons.addEventListener('click', (e) => {
+                const btn = e.target.closest('.trump-btn');
+                if (btn && gameState === 'TRUMP_SELECTION') {
+                    const suit = btn.dataset.suit;
+                    setTrump(suit);
+                }
+            });
+
+            // Play card click
+            playerHands.south.addEventListener('click', (e) => {
+                const cardEl = e.target.closest('.card');
+                if (gameState !== 'PLAYING' || currentPlayer !== 'south' || !cardEl) {
+                    return;
+                }
+
+                if (cardEl.classList.contains('disabled')) {
+                    updateStatusMessage("You must follow suit if you can!");
+                    return;
+                }
+
+                if (cardEl.classList.contains('playable')) {
+                    const cardId = cardEl.dataset.cardId;
+                    const cardIndex = players.south.hand.findIndex(c => c.id === cardId);
+                    const card = players.south.hand.splice(cardIndex, 1)[0];
+
+                    // Remove all highlights
+                    playerHands.south.querySelectorAll('.card').forEach(el => {
+                       el.classList.remove('playable', 'disabled');
+                    });
+
+                    playCard('south', card);
+                }
+            });
+
+            // Play again
+            playAgainBtn.addEventListener('click', initGame);
+
+            // --- START GAME ---
+            initGame();
+        });
+    </script>
+</body>
+</html>
