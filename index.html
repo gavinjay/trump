@@ -855,7 +855,7 @@
         <div id="modal-overlay">
             <!-- Main Menu Modal -->
             <div id="main-menu-modal" class="modal-content" style="display: none;">
-                <h2>Trump Card Game</h2>
+                <h2>Main Menu</h2>
 
                 <!-- Initial Menu -->
                 <div id="menu-main">
@@ -2448,8 +2448,13 @@
                 // Update player area displays
                 updatePlayerAreaNames();
 
-                // Hide modal and start game
+                // Reset menu views and hide modal
+                menuMain.style.display = 'block';
+                menuLobby.style.display = 'none';
+                menuJoin.style.display = 'none';
                 hideModal();
+
+                // Start game
                 initGame();
             }
 
