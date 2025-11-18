@@ -855,7 +855,7 @@
         <div id="modal-overlay">
             <!-- Main Menu Modal -->
             <div id="main-menu-modal" class="modal-content" style="display: none;">
-                <h2>Trump Card Game</h2>
+                <h2>Main Menu</h2>
 
                 <!-- Initial Menu -->
                 <div id="menu-main">
@@ -2242,6 +2242,7 @@
                         // Host started the game
                         if (!isHost) {
                             playerNames = data.playerNames;
+                            updatePlayerAreaNames();
                             hideModal();
                         }
                         break;
@@ -2284,13 +2285,23 @@
                 handTrickCounts = state.handTrickCounts;
                 gameState = state.gameState;
 
+                // Update myPosition if provided
+                if (state.myPosition) {
+                    myPosition = state.myPosition;
+                }
+
                 // Set up players - guest only sees their own cards
                 players = {
                     south: { hand: [], isAI: true, team: 'teamRed' },
                     east: { hand: [], isAI: true, team: 'teamBlue' },
-                    north: { hand: state.northHand || [], isAI: false, team: 'teamRed' },
+                    north: { hand: [], isAI: true, team: 'teamRed' },
                     west: { hand: [], isAI: true, team: 'teamBlue' },
                 };
+                // Set guest's hand at their position
+                if (myPosition && state.myHand) {
+                    players[myPosition].hand = state.myHand;
+                    players[myPosition].isAI = false;
+                }
 
                 // Update card counts from state
                 if (state.cardCounts) {
@@ -2306,11 +2317,11 @@
                 renderGuestHands();
                 renderCurrentTrick();
 
-                if (gameState === 'TRUMP_SELECTION' && currentPlayer === 'north') {
+                if (gameState === 'TRUMP_SELECTION' && currentPlayer === myPosition) {
                     promptForTrump();
-                } else if (gameState === 'PLAYING' && currentPlayer === 'north') {
+                } else if (gameState === 'PLAYING' && currentPlayer === myPosition) {
                     highlightPlayableCards();
-                    highlightActivePlayer('north');
+                    highlightActivePlayer(myPosition);
                     updateStatusMessage("Your turn. Select a card to play.");
                 } else {
                     highlightActivePlayer(currentPlayer);
@@ -2323,26 +2334,43 @@
             function sendGameState() {
                 if (!isMultiplayer || !isHost) return;
 
-                const state = {
-                    deck: deck,
-                    scores: scores,
-                    currentTrick: currentTrick,
-                    trumpSuit: trumpSuit,
-                    trumpCaller: trumpCaller,
-                    trickLeader: trickLeader,
-                    currentPlayer: currentPlayer,
-                    handTrickCounts: handTrickCounts,
-                    gameState: gameState,
-                    northHand: players.north.hand, // Send North's cards to guest
-                    cardCounts: {
-                        south: players.south.hand.length,
-                        north: players.north.hand.length,
-                        east: players.east.hand.length,
-                        west: players.west.hand.length,
-                    }
-                };
+                // Send personalized state to each guest based on their position
+                connections.forEach(conn => {
+                    if (!conn.open) return;
 
-                broadcast({ type: 'gameState', state: state });
+                    // Find this connection's position
+                    let guestPosition = null;
+                    for (const pos of POSITIONS) {
+                        if (lobbyPlayers[pos] && lobbyPlayers[pos].peerId === conn.peer) {
+                            guestPosition = pos;
+                            break;
+                        }
+                    }
+
+                    if (!guestPosition) return;
+
+                    const state = {
+                        deck: deck,
+                        scores: scores,
+                        currentTrick: currentTrick,
+                        trumpSuit: trumpSuit,
+                        trumpCaller: trumpCaller,
+                        trickLeader: trickLeader,
+                        currentPlayer: currentPlayer,
+                        handTrickCounts: handTrickCounts,
+                        gameState: gameState,
+                        myHand: players[guestPosition].hand, // Send this guest's cards
+                        myPosition: guestPosition, // Tell guest their position
+                        cardCounts: {
+                            south: players.south.hand.length,
+                            north: players.north.hand.length,
+                            east: players.east.hand.length,
+                            west: players.west.hand.length,
+                        }
+                    };
+
+                    conn.send({ type: 'gameState', state: state });
+                });
             }
 
             /**
@@ -2354,8 +2382,10 @@
                     playerHands[pos].innerHTML = '';
                 });
 
-                // Render North's hand (guest's cards) in the south position visually
-                const hand = players.north.hand;
+                if (!myPosition) return;
+
+                // Render guest's hand in the south position visually (bottom of screen)
+                const hand = players[myPosition].hand;
                 const handEl = playerHands.south; // Guest sees their cards at bottom
                 const totalCards = hand.length;
 
@@ -2372,8 +2402,8 @@
                     handEl.appendChild(cardEl);
                 });
 
-                // Update card counts from what we know
-                cardCounts.south.textContent = players.north.hand.length;
+                // Update card count display for guest's position
+                cardCounts.south.textContent = players[myPosition].hand.length;
             }
 
             /**
@@ -2394,10 +2424,10 @@
                 renderPlayedCard(player, card);
 
                 // If it's guest's card being played back, update their hand
-                if (player === 'north') {
-                    const cardIndex = players.north.hand.findIndex(c => c.id === card.id);
+                if (player === myPosition && myPosition) {
+                    const cardIndex = players[myPosition].hand.findIndex(c => c.id === card.id);
                     if (cardIndex !== -1) {
-                        players.north.hand.splice(cardIndex, 1);
+                        players[myPosition].hand.splice(cardIndex, 1);
                         renderGuestHands();
                     }
                 }
@@ -2409,7 +2439,9 @@
             function setTrumpFromNetwork(suit) {
                 trumpSuit = suit;
                 updateTrumpDisplay();
-                sortHand(players.north.hand);
+                if (myPosition) {
+                    sortHand(players[myPosition].hand);
+                }
                 renderGuestHands();
             }
 
@@ -2448,8 +2480,13 @@
                 // Update player area displays
                 updatePlayerAreaNames();
 
-                // Hide modal and start game
+                // Reset menu views and hide modal
+                menuMain.style.display = 'block';
+                menuLobby.style.display = 'none';
+                menuJoin.style.display = 'none';
                 hideModal();
+
+                // Start game
                 initGame();
             }
 
