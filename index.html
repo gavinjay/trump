@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- PeerJS for multiplayer -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
             --table-green: #0a6c3a;
@@ -418,6 +420,141 @@
             transform: scale(1.05);
         }
 
+        /* Main Menu Styles */
+        #main-menu-modal {
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .menu-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .menu-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .menu-btn-primary {
+            background-color: var(--table-green-dark);
+            color: var(--text-light);
+        }
+
+        .menu-btn-primary:hover {
+            background-color: #0b8046;
+        }
+
+        .menu-btn-secondary {
+            background-color: #5c8cff;
+            color: white;
+        }
+
+        .menu-btn-secondary:hover {
+            background-color: #4a7ae8;
+        }
+
+        #join-input {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        #join-input:focus {
+            outline: none;
+            border-color: var(--table-green);
+        }
+
+        #host-info {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        #host-info p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+
+        #game-code {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--table-green-dark);
+            letter-spacing: 3px;
+        }
+
+        #share-link {
+            font-size: 0.75rem;
+            word-break: break-all;
+            color: #666;
+        }
+
+        .copy-btn {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            margin-left: 5px;
+            background: var(--table-green-dark);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #waiting-message {
+            font-style: italic;
+            color: #666;
+        }
+
+        #connection-status {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .status-connected {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .status-waiting {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .status-error {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .back-btn:hover {
+            color: #333;
+        }
+
         /* Responsive Design */
         @media (max-width: 700px) {
             #game-container {
@@ -618,6 +755,41 @@
 
         <!-- Modal Overlays -->
         <div id="modal-overlay">
+            <!-- Main Menu Modal -->
+            <div id="main-menu-modal" class="modal-content" style="display: none;">
+                <h2>Trump Card Game</h2>
+
+                <!-- Initial Menu -->
+                <div id="menu-main">
+                    <button class="menu-btn menu-btn-primary" id="play-ai-btn">Play vs AI</button>
+                    <button class="menu-btn menu-btn-secondary" id="host-game-btn">Host Game</button>
+                    <button class="menu-btn menu-btn-secondary" id="join-game-btn">Join Game</button>
+                </div>
+
+                <!-- Host Game View -->
+                <div id="menu-host" style="display: none;">
+                    <div id="host-info">
+                        <p>Your Game Code:</p>
+                        <p id="game-code">------</p>
+                        <p style="margin-top: 10px;">Share this link:</p>
+                        <p id="share-link">Generating...</p>
+                        <button class="copy-btn" id="copy-link-btn">Copy</button>
+                    </div>
+                    <div id="connection-status" class="status-waiting">Waiting for opponent...</div>
+                    <p id="waiting-message">Share the code or link with a friend to start playing!</p>
+                    <button class="back-btn" id="host-back-btn">← Back to Menu</button>
+                </div>
+
+                <!-- Join Game View -->
+                <div id="menu-join" style="display: none;">
+                    <p>Enter Game Code:</p>
+                    <input type="text" id="join-input" placeholder="XXXXXX" maxlength="6">
+                    <button class="menu-btn menu-btn-secondary" id="join-connect-btn">Connect</button>
+                    <div id="join-status"></div>
+                    <button class="back-btn" id="join-back-btn">← Back to Menu</button>
+                </div>
+            </div>
+
             <!-- Trump Selection Modal -->
             <div id="trump-selection-modal" class="modal-content" style="display: none;">
                 <h2 id="trump-modal-title">Select Trump Suit</h2>
@@ -704,6 +876,17 @@
             const specialEventOverlay = document.getElementById('special-event-overlay'); // NEW
             const specialEventMessage = document.getElementById('special-event-message'); // NEW
 
+            // Menu elements
+            const mainMenuModal = document.getElementById('main-menu-modal');
+            const menuMain = document.getElementById('menu-main');
+            const menuHost = document.getElementById('menu-host');
+            const menuJoin = document.getElementById('menu-join');
+            const gameCodeDisplay = document.getElementById('game-code');
+            const shareLinkDisplay = document.getElementById('share-link');
+            const connectionStatus = document.getElementById('connection-status');
+            const joinInput = document.getElementById('join-input');
+            const joinStatus = document.getElementById('join-status');
+
             // --- GAME STATE ---
             let deck = [];
             let players = {};
@@ -716,6 +899,14 @@
             let handTrickCounts = { teamRed: 0, teamBlue: 0 }; // UPDATED: teamA/B -> teamRed/Blue
             // REMOVED playerTrickCounts
             let gameState = 'INIT'; // INIT, DEALING, TRUMP_SELECTION, PLAYING, TRICK_OVER, HAND_OVER, GAME_OVER
+
+            // --- MULTIPLAYER STATE ---
+            let peer = null;
+            let connections = [];
+            let isHost = false;
+            let isMultiplayer = false;
+            let myPosition = 'south'; // The human player's position
+            let gameCode = '';
 
             // --- CORE GAME LOGIC ---
 
@@ -736,21 +927,19 @@
                 deck = createDeck();
                 shuffleDeck(deck);
                 players = {
-                    south: { hand: [], isAI: false, team: 'teamRed' }, // UPDATED
-                    east: { hand: [], isAI: true, team: 'teamBlue' }, // UPDATED
-                    north: { hand: [], isAI: true, team: 'teamRed' }, // UPDATED
-                    west: { hand: [], isAI: true, team: 'teamBlue' }, // UPDATED
+                    south: { hand: [], isAI: false, team: 'teamRed' },
+                    east: { hand: [], isAI: true, team: 'teamBlue' },
+                    north: { hand: [], isAI: isMultiplayer ? false : true, team: 'teamRed' }, // Human in multiplayer
+                    west: { hand: [], isAI: true, team: 'teamBlue' },
                 };
                 currentTrick = [];
-                handTrickCounts = { teamRed: 0, teamBlue: 0 }; // UPDATED
-                // REMOVED playerTrickCounts
+                handTrickCounts = { teamRed: 0, teamBlue: 0 };
 
                 updateStatusMessage('Dealing initial cards...');
                 updateScoreDisplay();
-                updateHandScoreDisplay(); // NEW
+                updateHandScoreDisplay();
                 updateTrumpDisplay();
                 clearTrickArea();
-                // REMOVED clearWonTricksDisplay();
 
                 // 1. Deal 5 cards to each player
                 for (let i = 0; i < 5; i++) {
@@ -760,7 +949,15 @@
                 }
 
                 sortHand(players.south.hand);
-                renderAllHands(); // Show the 5 cards
+                if (isMultiplayer) {
+                    sortHand(players.north.hand);
+                }
+                renderAllHands();
+
+                // Send state to guest in multiplayer
+                if (isMultiplayer && isHost) {
+                    sendGameState();
+                }
 
                 // 2. Go to trump selection
                 setTimeout(() => {
@@ -779,10 +976,10 @@
                 deck = createDeck();
                 shuffleDeck(deck);
                 players = {
-                    south: { hand: [], isAI: false, team: 'teamRed' }, // UPDATED
-                    east: { hand: [], isAI: true, team: 'teamBlue' }, // UPDATED
-                    north: { hand: [], isAI: true, team: 'teamRed' }, // UPDATED
-                    west: { hand: [], isAI: true, team: 'teamBlue' }, // UPDATED
+                    south: { hand: [], isAI: false, team: 'teamRed' },
+                    east: { hand: [], isAI: true, team: 'teamBlue' },
+                    north: { hand: [], isAI: isMultiplayer ? false : true, team: 'teamRed' },
+                    west: { hand: [], isAI: true, team: 'teamBlue' },
                 };
 
                 // Reset trick data
@@ -949,15 +1146,27 @@
                     }
                 }
 
-                // Re-sort human hand with all 13 cards
+                // Re-sort human hands with all 13 cards
                 sortHand(players.south.hand);
+                if (isMultiplayer) {
+                    sortHand(players.north.hand);
+                }
                 renderAllHands();
 
+                // Broadcast trump selection in multiplayer
+                if (isMultiplayer && isHost) {
+                    broadcast({ type: 'trumpSelected', suit: suit });
+                    sendGameState();
+                }
+
                 // 4. Start first trick
-                gameState = 'PLAYING'; // <-- FIX: Set to PLAYING *now*
+                gameState = 'PLAYING';
                 setTimeout(() => {
                     updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. ${capitalize(trickLeader)} starts.`);
-                    nextTurn(); // <-- FIX: Call nextTurn directly
+                    if (isMultiplayer && isHost) {
+                        sendGameState();
+                    }
+                    nextTurn();
                 }, 1000);
             }
 
@@ -970,10 +1179,21 @@
                 console.log(`Turn: ${currentPlayer}`);
                 highlightActivePlayer(currentPlayer);
 
-                if (currentPlayer === 'south') {
+                // Check if current player is human
+                const isHumanTurn = !players[currentPlayer].isAI;
+
+                if (isHumanTurn) {
                     // Human player's turn
-                    updateStatusMessage("Your turn. Select a card to play.");
-                    highlightPlayableCards();
+                    if (currentPlayer === myPosition) {
+                        updateStatusMessage("Your turn. Select a card to play.");
+                        highlightPlayableCards();
+                    } else {
+                        // It's the other human's turn (in multiplayer)
+                        updateStatusMessage(`Waiting for ${capitalize(currentPlayer)}...`);
+                        if (isHost) {
+                            sendGameState(); // Let guest know it's their turn
+                        }
+                    }
                 } else {
                     // AI player's turn
                     updateStatusMessage(`${capitalize(currentPlayer)}'s turn...`);
@@ -1084,6 +1304,12 @@
                 renderPlayedCard(player, card);
                 renderAllHands();
 
+                // Broadcast in multiplayer
+                if (isMultiplayer && isHost) {
+                    broadcast({ type: 'cardPlayed', player: player, card: card });
+                    sendGameState();
+                }
+
                 // --- Check for "Ace Catch King" ---
                 const kingOfTrump = currentTrick.find(c => c.card.suit === trumpSuit && c.card.rank === 'K');
                 const aceOfTrump = currentTrick.find(c => c.card.suit === trumpSuit && c.card.rank === 'A');
@@ -1091,11 +1317,14 @@
                 if (kingOfTrump && aceOfTrump) {
                     const kingIndex = currentTrick.indexOf(kingOfTrump);
                     const aceIndex = currentTrick.indexOf(aceOfTrump);
+                    const kingTeam = players[kingOfTrump.player].team;
+                    const aceTeam = players[aceOfTrump.player].team;
 
-                    if (aceIndex > kingIndex) {
-                        // Ace was played AFTER the King!
-                        const winner = aceOfTrump.player; // NEW
-                        const winnerTeam = players[winner].team;
+                    // Only trigger if ace catches king AND they are on different teams
+                    if (aceIndex > kingIndex && kingTeam !== aceTeam) {
+                        // Ace was played AFTER the King by opposing team!
+                        const winner = aceOfTrump.player;
+                        const winnerTeam = aceTeam;
                         console.log(`!!! ACE CATCH KING by ${winner} !!!`);
 
                         // --- NEW ---
@@ -1404,9 +1633,9 @@
              * NEW: Highlights playable cards in the human player's hand.
              */
             function highlightPlayableCards() {
-                if (currentPlayer !== 'south') return;
+                if (currentPlayer !== myPosition) return;
 
-                const hand = players.south.hand;
+                const hand = players[myPosition].hand;
                 const ledSuit = currentTrick.length > 0 ? currentTrick[0].card.suit : null;
 
                 // Get the actual playable card objects
@@ -1499,6 +1728,384 @@
                 }, 2500); // Show for 2.5 seconds
             }
 
+            // --- MULTIPLAYER FUNCTIONS ---
+
+            /**
+             * Shows the main menu modal
+             */
+            function showMainMenu() {
+                // Check URL for join code
+                const urlParams = new URLSearchParams(window.location.search);
+                const joinCode = urlParams.get('join');
+
+                mainMenuModal.style.display = 'block';
+                trumpModal.style.display = 'none';
+                gameOverModal.style.display = 'none';
+                showModal();
+
+                // Reset menu views
+                menuMain.style.display = 'block';
+                menuHost.style.display = 'none';
+                menuJoin.style.display = 'none';
+
+                // If URL has join code, go straight to join
+                if (joinCode) {
+                    showJoinView();
+                    joinInput.value = joinCode.toUpperCase();
+                }
+            }
+
+            /**
+             * Generate a random 6-character game code
+             */
+            function generateGameCode() {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed ambiguous chars
+                let code = '';
+                for (let i = 0; i < 6; i++) {
+                    code += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return code;
+            }
+
+            /**
+             * Show the host game view
+             */
+            function showHostView() {
+                menuMain.style.display = 'none';
+                menuHost.style.display = 'block';
+
+                gameCode = generateGameCode();
+                gameCodeDisplay.textContent = gameCode;
+
+                const shareUrl = `${window.location.origin}${window.location.pathname}?join=${gameCode}`;
+                shareLinkDisplay.textContent = shareUrl;
+
+                // Initialize PeerJS as host
+                isHost = true;
+                isMultiplayer = true;
+                myPosition = 'south';
+
+                peer = new Peer('trump-' + gameCode);
+
+                peer.on('open', (id) => {
+                    console.log('Host peer opened with ID:', id);
+                    connectionStatus.textContent = 'Waiting for opponent...';
+                    connectionStatus.className = 'status-waiting';
+                });
+
+                peer.on('connection', (conn) => {
+                    console.log('Guest connected!');
+                    connections.push(conn);
+
+                    conn.on('open', () => {
+                        connectionStatus.textContent = 'Opponent connected!';
+                        connectionStatus.className = 'status-connected';
+
+                        // Start game after short delay
+                        setTimeout(() => {
+                            hideModal();
+                            initGame();
+                        }, 1000);
+                    });
+
+                    conn.on('data', (data) => {
+                        handlePeerData(data);
+                    });
+
+                    conn.on('close', () => {
+                        console.log('Guest disconnected');
+                        updateStatusMessage('Opponent disconnected!');
+                    });
+                });
+
+                peer.on('error', (err) => {
+                    console.error('Peer error:', err);
+                    connectionStatus.textContent = 'Connection error: ' + err.type;
+                    connectionStatus.className = 'status-error';
+                });
+            }
+
+            /**
+             * Show the join game view
+             */
+            function showJoinView() {
+                menuMain.style.display = 'none';
+                menuJoin.style.display = 'block';
+                joinInput.value = '';
+                joinStatus.textContent = '';
+            }
+
+            /**
+             * Connect to a host's game
+             */
+            function connectToHost() {
+                const code = joinInput.value.trim().toUpperCase();
+                if (code.length !== 6) {
+                    joinStatus.textContent = 'Please enter a 6-character code';
+                    joinStatus.className = 'status-error';
+                    return;
+                }
+
+                joinStatus.textContent = 'Connecting...';
+                joinStatus.className = 'status-waiting';
+
+                isHost = false;
+                isMultiplayer = true;
+                myPosition = 'north'; // Guest plays as North
+
+                peer = new Peer();
+
+                peer.on('open', () => {
+                    console.log('Guest peer opened, connecting to host...');
+
+                    const conn = peer.connect('trump-' + code);
+                    connections.push(conn);
+
+                    conn.on('open', () => {
+                        console.log('Connected to host!');
+                        joinStatus.textContent = 'Connected! Starting game...';
+                        joinStatus.className = 'status-connected';
+
+                        // Hide modal - host will send game state
+                        setTimeout(() => {
+                            hideModal();
+                        }, 1000);
+                    });
+
+                    conn.on('data', (data) => {
+                        handlePeerData(data);
+                    });
+
+                    conn.on('close', () => {
+                        console.log('Host disconnected');
+                        updateStatusMessage('Host disconnected!');
+                    });
+                });
+
+                peer.on('error', (err) => {
+                    console.error('Peer error:', err);
+                    joinStatus.textContent = 'Connection failed: ' + err.type;
+                    joinStatus.className = 'status-error';
+                });
+            }
+
+            /**
+             * Send data to all connected peers
+             */
+            function broadcast(data) {
+                connections.forEach(conn => {
+                    if (conn.open) {
+                        conn.send(data);
+                    }
+                });
+            }
+
+            /**
+             * Handle incoming peer data
+             */
+            function handlePeerData(data) {
+                console.log('Received:', data.type);
+
+                switch (data.type) {
+                    case 'gameState':
+                        // Full game state sync from host
+                        receiveGameState(data.state);
+                        break;
+
+                    case 'cardPlayed':
+                        // A card was played (from guest to host, or host broadcasting)
+                        if (isHost) {
+                            // Host receives guest's play, then broadcasts
+                            playCard(data.player, data.card);
+                        } else {
+                            // Guest receives broadcast of plays
+                            playCardFromNetwork(data.player, data.card);
+                        }
+                        break;
+
+                    case 'trumpSelected':
+                        if (!isHost) {
+                            setTrumpFromNetwork(data.suit);
+                        }
+                        break;
+                }
+            }
+
+            /**
+             * Receive full game state (for guest)
+             */
+            function receiveGameState(state) {
+                deck = state.deck;
+                scores = state.scores;
+                currentTrick = state.currentTrick;
+                trumpSuit = state.trumpSuit;
+                trumpCaller = state.trumpCaller;
+                trickLeader = state.trickLeader;
+                currentPlayer = state.currentPlayer;
+                handTrickCounts = state.handTrickCounts;
+                gameState = state.gameState;
+
+                // Set up players - guest only sees their own cards
+                players = {
+                    south: { hand: [], isAI: true, team: 'teamRed' },
+                    east: { hand: [], isAI: true, team: 'teamBlue' },
+                    north: { hand: state.northHand || [], isAI: false, team: 'teamRed' },
+                    west: { hand: [], isAI: true, team: 'teamBlue' },
+                };
+
+                // Update card counts from state
+                if (state.cardCounts) {
+                    cardCounts.south.textContent = state.cardCounts.south;
+                    cardCounts.north.textContent = state.cardCounts.north;
+                    cardCounts.east.textContent = state.cardCounts.east;
+                    cardCounts.west.textContent = state.cardCounts.west;
+                }
+
+                updateScoreDisplay();
+                updateHandScoreDisplay();
+                updateTrumpDisplay();
+                renderGuestHands();
+                renderCurrentTrick();
+
+                if (gameState === 'TRUMP_SELECTION' && currentPlayer === 'north') {
+                    promptForTrump();
+                } else if (gameState === 'PLAYING' && currentPlayer === 'north') {
+                    highlightPlayableCards();
+                    highlightActivePlayer('north');
+                    updateStatusMessage("Your turn. Select a card to play.");
+                } else {
+                    highlightActivePlayer(currentPlayer);
+                }
+            }
+
+            /**
+             * Send game state to guests
+             */
+            function sendGameState() {
+                if (!isMultiplayer || !isHost) return;
+
+                const state = {
+                    deck: deck,
+                    scores: scores,
+                    currentTrick: currentTrick,
+                    trumpSuit: trumpSuit,
+                    trumpCaller: trumpCaller,
+                    trickLeader: trickLeader,
+                    currentPlayer: currentPlayer,
+                    handTrickCounts: handTrickCounts,
+                    gameState: gameState,
+                    northHand: players.north.hand, // Send North's cards to guest
+                    cardCounts: {
+                        south: players.south.hand.length,
+                        north: players.north.hand.length,
+                        east: players.east.hand.length,
+                        west: players.west.hand.length,
+                    }
+                };
+
+                broadcast({ type: 'gameState', state: state });
+            }
+
+            /**
+             * Render hands for guest (only sees their own cards)
+             */
+            function renderGuestHands() {
+                // Clear all hands first
+                POSITIONS.forEach(pos => {
+                    playerHands[pos].innerHTML = '';
+                });
+
+                // Render North's hand (guest's cards) in the south position visually
+                const hand = players.north.hand;
+                const handEl = playerHands.south; // Guest sees their cards at bottom
+                const totalCards = hand.length;
+
+                const cardSlotWidth = totalCards <= 5 ? 65 : 35;
+                const spreadWidth = Math.min((totalCards - 1) * cardSlotWidth, gameContainer.clientWidth * 0.8);
+                const startOffset = -spreadWidth / 2;
+
+                hand.forEach((card, i) => {
+                    const cardEl = createCardElement(card);
+                    const offset = startOffset + (i / (totalCards - 1 || 1)) * spreadWidth;
+                    cardEl.style.transform = `translateX(${offset}px) rotate(${((i / (totalCards - 1)) - 0.5) * 10}deg)`;
+                    cardEl.style.zIndex = i;
+                    cardEl.dataset.cardId = card.id;
+                    handEl.appendChild(cardEl);
+                });
+
+                // Update card counts from what we know
+                cardCounts.south.textContent = players.north.hand.length;
+            }
+
+            /**
+             * Render the current trick cards
+             */
+            function renderCurrentTrick() {
+                clearTrickArea();
+                currentTrick.forEach(entry => {
+                    renderPlayedCard(entry.player, entry.card);
+                });
+            }
+
+            /**
+             * Play a card received from network (for guest)
+             */
+            function playCardFromNetwork(player, card) {
+                currentTrick.push({ player, card });
+                renderPlayedCard(player, card);
+
+                // If it's guest's card being played back, update their hand
+                if (player === 'north') {
+                    const cardIndex = players.north.hand.findIndex(c => c.id === card.id);
+                    if (cardIndex !== -1) {
+                        players.north.hand.splice(cardIndex, 1);
+                        renderGuestHands();
+                    }
+                }
+            }
+
+            /**
+             * Set trump from network (for guest)
+             */
+            function setTrumpFromNetwork(suit) {
+                trumpSuit = suit;
+                updateTrumpDisplay();
+                sortHand(players.north.hand);
+                renderGuestHands();
+            }
+
+            /**
+             * Copy share link to clipboard
+             */
+            function copyShareLink() {
+                const shareUrl = `${window.location.origin}${window.location.pathname}?join=${gameCode}`;
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    const btn = document.getElementById('copy-link-btn');
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        btn.textContent = 'Copy';
+                    }, 2000);
+                });
+            }
+
+            /**
+             * Reset to main menu
+             */
+            function backToMenu() {
+                // Clean up peer connections
+                if (peer) {
+                    peer.destroy();
+                    peer = null;
+                }
+                connections = [];
+                isHost = false;
+                isMultiplayer = false;
+                myPosition = 'south';
+                gameCode = '';
+
+                showMainMenu();
+            }
+
             // --- EVENT LISTENERS ---
 
             // Trump selection buttons
@@ -1513,7 +2120,12 @@
             // Play card click
             playerHands.south.addEventListener('click', (e) => {
                 const cardEl = e.target.closest('.card');
-                if (gameState !== 'PLAYING' || currentPlayer !== 'south' || !cardEl) {
+
+                // Determine which position the local player controls
+                const myPos = myPosition;
+
+                // Check if it's our turn
+                if (gameState !== 'PLAYING' || currentPlayer !== myPos || !cardEl) {
                     return;
                 }
 
@@ -1524,23 +2136,65 @@
 
                 if (cardEl.classList.contains('playable')) {
                     const cardId = cardEl.dataset.cardId;
-                    const cardIndex = players.south.hand.findIndex(c => c.id === cardId);
-                    const card = players.south.hand.splice(cardIndex, 1)[0];
+                    const hand = players[myPos].hand;
+                    const cardIndex = hand.findIndex(c => c.id === cardId);
+                    const card = hand.splice(cardIndex, 1)[0];
 
                     // Remove all highlights
                     playerHands.south.querySelectorAll('.card').forEach(el => {
                        el.classList.remove('playable', 'disabled');
                     });
 
-                    playCard('south', card);
+                    // If guest, send to host; if host or single player, play directly
+                    if (isMultiplayer && !isHost) {
+                        // Guest sends card play to host
+                        broadcast({ type: 'cardPlayed', player: myPos, card: card });
+                        // Re-render guest's hand locally
+                        renderGuestHands();
+                    } else {
+                        playCard(myPos, card);
+                    }
                 }
             });
 
             // Play again
-            playAgainBtn.addEventListener('click', initGame);
+            playAgainBtn.addEventListener('click', () => {
+                if (isMultiplayer) {
+                    showMainMenu();
+                } else {
+                    initGame();
+                }
+            });
 
-            // --- START GAME ---
-            initGame();
+            // --- MENU EVENT LISTENERS ---
+
+            // Play vs AI button
+            document.getElementById('play-ai-btn').addEventListener('click', () => {
+                isMultiplayer = false;
+                isHost = false;
+                myPosition = 'south';
+                hideModal();
+                initGame();
+            });
+
+            // Host game button
+            document.getElementById('host-game-btn').addEventListener('click', showHostView);
+
+            // Join game button
+            document.getElementById('join-game-btn').addEventListener('click', showJoinView);
+
+            // Connect to host button
+            document.getElementById('join-connect-btn').addEventListener('click', connectToHost);
+
+            // Copy link button
+            document.getElementById('copy-link-btn').addEventListener('click', copyShareLink);
+
+            // Back buttons
+            document.getElementById('host-back-btn').addEventListener('click', backToMenu);
+            document.getElementById('join-back-btn').addEventListener('click', backToMenu);
+
+            // --- START ---
+            showMainMenu();
         });
     </script>
 </body>
