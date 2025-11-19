@@ -1260,10 +1260,25 @@
 
             /**
              * Starts a new hand (one round of 13 tricks).
+             * @param {string} winningTeam - The team that won the previous hand and gets to pick trump
              */
-            function startNewHand() {
+            function startNewHand(winningTeam) {
                 console.log(`--- Starting New Hand ---`);
-                gameState = 'DEALING';
+                gameState = 'TRUMP_SELECTION';
+
+                // Set trump caller from the winning team
+                if (winningTeam === 'teamRed') {
+                    // Alternate between south and north for Team Red
+                    trumpCaller = (trumpCaller === 'south') ? 'north' : 'south';
+                } else {
+                    // Alternate between east and west for Team Blue
+                    trumpCaller = (trumpCaller === 'east' || trumpCaller === 'south' || trumpCaller === 'north') ? 'east' : 'west';
+                    if (trumpCaller !== 'east' && trumpCaller !== 'west') {
+                        trumpCaller = 'east';
+                    }
+                }
+                currentPlayer = trumpCaller;
+                trumpSuit = null; // Reset trump for new hand
 
                 // Reset hands and deck
                 deck = createDeck();
@@ -1286,26 +1301,18 @@
 
                 // Reset trick data
                 currentTrick = [];
-                handTrickCounts = { teamRed: 0, teamBlue: 0 }; // UPDATED
-                // REMOVED playerTrickCounts
-                // --- TRUMP SUIT IS NOT RESET ---
+                handTrickCounts = { teamRed: 0, teamBlue: 0 };
 
-                // trickLeader is set by setTrump (for hand 1) or endTrick (for others)
-                currentPlayer = trickLeader;
-
-                updateStatusMessage('Dealing cards...');
+                updateStatusMessage('Dealing initial cards...');
                 updateScoreDisplay();
-                updateHandScoreDisplay(); // NEW
-                updateTrumpDisplay(); // Show the game-wide trump
+                updateHandScoreDisplay();
+                updateTrumpDisplay();
                 clearTrickArea();
-                // REMOVED clearWonTricksDisplay();
 
-                // 1. Deal 13 cards to each player
-                for (let i = 0; i < 13; i++) {
+                // 1. Deal 5 cards to each player for trump selection
+                for (let i = 0; i < 5; i++) {
                     for (const pos of POSITIONS) {
-                        if (deck.length > 0) { // Safety check
-                           players[pos].hand.push(deck.pop());
-                        }
+                        players[pos].hand.push(deck.pop());
                     }
                 }
 
@@ -1320,18 +1327,15 @@
                 }
                 renderAllHands();
 
-                // 2. Start first trick
-                gameState = 'PLAYING'; // <-- FIX: Set to PLAYING *before* calling nextTurn
-
                 // Send state to guests
                 if (isMultiplayer && isHost) {
                     sendGameState();
                 }
 
+                // 2. Go to trump selection
                 setTimeout(() => {
-                    updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. ${capitalize(trickLeader)} starts.`);
-                    nextTurn();
-                }, 1000);
+                    promptForTrump();
+                }, 500);
             }
 
             /**
@@ -1399,21 +1403,29 @@
                 updateStatusMessage(`${capitalize(currentPlayer)} is selecting trump...`);
                 highlightActivePlayer(currentPlayer);
 
-                if (currentPlayer === 'south') {
+                // Check if the current player is the local human
+                const isLocalHuman = (currentPlayer === myPosition);
+
+                if (isLocalHuman) {
                     // Show modal for human player
                     document.getElementById('trump-modal-title').textContent = "Select Trump Suit";
-                    document.getElementById('trump-modal-text').textContent = "Select the trump suit for this hand.";
+                    document.getElementById('trump-modal-text').textContent = "Select the trump suit for this round.";
                     trumpModal.style.display = 'block';
                     gameOverModal.style.display = 'none';
                     showModal();
                     modalOverlay.classList.add('trump-select'); // NEW: Special class
-                } else {
+                } else if (players[currentPlayer].isAI) {
                     // AI selects trump
                     setTimeout(() => {
                         const aiHand = players[currentPlayer].hand;
                         const chosenSuit = aiSelectTrump(aiHand);
                         setTrump(chosenSuit);
                     }, AI_THINK_TIME * 1.5);
+                } else {
+                    // It's another human player's turn (multiplayer guest)
+                    if (isHost) {
+                        sendGameState(); // Let guest know it's their turn to select trump
+                    }
                 }
             }
 
@@ -1762,9 +1774,8 @@
                     const gameWinner = scores.teamRed === 7 ? 'teamRed' : 'teamBlue'; // UPDATED
                     showGameOver(gameWinner, "Reached 7 points!");
                 } else {
-                    // Start next hand
-                    // --- REMOVED TRUMP CALLER ROTATION ---
-                    setTimeout(startNewHand, 3000); // Pause before next hand
+                    // Start next hand - winning team picks trump
+                    setTimeout(() => startNewHand(handWinner), 3000); // Pause before next hand
                 }
             }
 
