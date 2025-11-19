@@ -1668,20 +1668,18 @@
                 const aceOfTrump = currentTrick.find(c => c.card.suit === trumpSuit && c.card.rank === 'A');
 
                 if (kingOfTrump && aceOfTrump) {
-                    const kingIndex = currentTrick.indexOf(kingOfTrump);
-                    const aceIndex = currentTrick.indexOf(aceOfTrump);
                     const kingTeam = players[kingOfTrump.player].team;
                     const aceTeam = players[aceOfTrump.player].team;
 
-                    // Only trigger if ace catches king AND they are on different teams
-                    if (aceIndex > kingIndex && kingTeam !== aceTeam) {
-                        // Ace was played AFTER the King by opposing team!
+                    // Trigger if both ace and king of trump are in same trick AND on different teams
+                    // Ace always catches king regardless of play order
+                    if (kingTeam !== aceTeam) {
                         const winner = aceOfTrump.player;
                         const winnerTeam = aceTeam;
                         console.log(`!!! ACE CATCH KING by ${winner} !!!`);
 
                         // --- NEW ---
-                        const winnerName = (winnerTeam === 'teamRed') ? "Team Red" : "Team Blue"; // UPDATED
+                        const winnerName = (winnerTeam === 'teamRed') ? "Team Red" : "Team Blue";
                         showSpecialEventMessage(`ACE CATCH KING!\n${winnerName} wins!`);
 
                         // Delay the game-over modal to let the message be seen
