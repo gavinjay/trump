@@ -203,6 +203,9 @@
             font-weight: 700;
             font-size: 1rem;
             margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .player-info {
@@ -1048,6 +1051,78 @@
             }
         }
 
+        /* Reaction System */
+        .reaction-btn {
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            margin-left: 10px;
+            transition: all 0.2s ease;
+            display: inline-block;
+            line-height: 1;
+        }
+
+        .reaction-btn:hover {
+            background: rgba(255, 255, 255, 0.5);
+            border-color: rgba(255, 255, 255, 0.8);
+            transform: scale(1.2);
+        }
+
+        .reaction-btn:active {
+            transform: scale(0.95);
+        }
+
+        #reaction-picker {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
+        }
+
+        .reaction-option {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 2.5rem;
+            cursor: pointer;
+            padding: 10px 15px;
+            transition: all 0.2s ease;
+            line-height: 1;
+        }
+
+        .reaction-option:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.3);
+        }
+
+        .reaction-option:active {
+            transform: scale(0.9);
+        }
+
+        .player-reaction {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 2rem;
+            animation: reaction-pop 0.5s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes reaction-pop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
     </style>
 </head>
 <body>
@@ -1078,33 +1153,49 @@
         <div id="game-table">
             <!-- AI Player North -->
             <div class="player-area" id="player-north-area">
-                <div class="player-name">North (AI)</div>
+                <div class="player-name">
+                    North (AI)
+                    <button class="reaction-btn" id="reaction-btn-north" title="Send Reaction" style="display: none;">�</buutton>
+                </div>
                 <!-- UPDATED: Team Red -->
                 <div class="player-info"><span class="team-red-text">Team Red</span> | <span id="card-count-north">0</span> cards</div>
                 <div class="ai-hand" id="ai-hand-north"></div>
+                <div class="player-reaction" id="reaction-north"></div>
             </div>
 
             <!-- AI Player West -->
             <div class="player-area" id="player-west-area">
-                <div class="player-name">West (AI)</div>
+                <div class="player-name">
+                    West (AI)
+                    <button class="reaction-btn" id="reaction-btn-west" title="Send Reaction" style="display: none;">�<//button>
+                </div>
                 <!-- UPDATED: Team Blue -->
                 <div class="player-info"><span class="team-blue-text">Team Blue</span> | <span id="card-count-west">0</span> cards</div>
                 <div class="ai-hand" id="ai-hand-west"></div>
+                <div class="player-reaction" id="reaction-west"></div>
             </div>
 
             <!-- AI Player East -->
             <div class="player-area" id="player-east-area">
-                <div class="player-name">East (AI)</div>
+                <div class="player-name">
+                    East (AI)
+                    <button class="reaction-btn" id="reaction-btn-east" title="Send Reaction" style="display: none;">�<</button>
+                </div>
                 <!-- UPDATED: Team Blue -->
                 <div class="player-info"><span class="team-blue-text">Team Blue</span> | <span id="card-count-east">0</span> cards</div>
                 <div class="ai-hand" id="ai-hand-east"></div>
+                <div class="player-reaction" id="reaction-east"></div>
             </div>
 
             <!-- Human Player South Area (Name/Info) -->
             <div class="player-area" id="player-south-area">
-                <div class="player-name">South (You)</div>
+                <div class="player-name">
+                    South (You)
+                    <button class="reaction-btn" id="reaction-btn-south" title="Send Reaction">�</button>
+                </div>
                 <!-- UPDATED: Team Red -->
                 <div class="player-info"><span class="team-red-text">Team Red</span> | <span id="card-count-south">0</span> cards</div>
+                <div class="player-reaction" id="reaction-south"></div>
             </div>
 
             <!-- Won trick stacks -- REMOVED -->
@@ -1321,6 +1412,17 @@
         <!-- NEW Special Event Overlay -->
         <div id="special-event-overlay">
             <div id="special-event-message"></div>
+        </div>
+
+        <!-- Reaction Picker -->
+        <div id="reaction-picker" style="display: none;">
+            <button class="reaction-option" data-emoji="❤️">❤️</button>
+            <button class="reaction-option" data-emoji="👍">👍</button>
+            <button class="reaction-option" data-emoji="👎">👎</button>
+            <button class="reaction-option" data-emoji="�">�</butttton>
+            <button class="reaction-option" data-emoji="�">>�</butto>n>
+            <button class="reaction-option" data-emoji="🖕">🖕</button>
+            <button class="reaction-option" data-emoji="😠">😠</button>
         </div>
     </div>
 
@@ -2661,6 +2763,17 @@
 
                 peer.on('connection', (conn) => {
                     console.log('New player connecting...');
+                    
+                    // Check if game is already in progress
+                    if (gameState !== 'INIT' && gameState !== 'TRUMP_SELECTION' && gameState !== 'DEALING') {
+                        console.log('Game already in progress, rejecting connection');
+                        conn.on('open', () => {
+                            conn.send({ type: 'error', message: 'Game already in progress. Cannot join.' });
+                            conn.close();
+                        });
+                        return;
+                    }
+                    
                     connections.push(conn);
 
                     conn.on('open', () => {
@@ -2927,6 +3040,34 @@
                             }
                         }
                         break;
+
+                    case 'error':
+                        // Generic error message from host
+                        if (!isHost) {
+                            joinStatus.textContent = data.message || 'An error occurred';
+                            joinStatus.className = 'status-error';
+                            if (peer) {
+                                peer.destroy();
+                                peer = null;
+                            }
+                        }
+                        break;
+
+                    case 'reaction':
+                        // Player sent a reaction
+                        showReaction(data.position, data.emoji);
+                        // If host, broadcast to all other guests (except sender)
+                        if (isHost) {
+                            // Find the sender's connection
+                            const senderConn = conn;
+                            // Broadcast to everyone except the sender
+                            connections.forEach(c => {
+                                if (c.open && c !== senderConn) {
+                                    c.send({ type: 'reaction', position: data.position, emoji: data.emoji });
+                                }
+                            });
+                        }
+                        break;
                 }
             }
 
@@ -3175,10 +3316,20 @@
                 const eastPlayer = getLogicalPosition('east');
                 const westPlayer = getLogicalPosition('west');
 
-                document.querySelector('#player-south-area .player-name').textContent = playerNames[southPlayer];
-                document.querySelector('#player-north-area .player-name').textContent = playerNames[northPlayer];
-                document.querySelector('#player-east-area .player-name').textContent = playerNames[eastPlayer];
-                document.querySelector('#player-west-area .player-name').textContent = playerNames[westPlayer];
+                // Update player names while preserving reaction buttons
+                const updatePlayerName = (pos, name) => {
+                    const nameEl = document.querySelector(`#player-${pos}-area .player-name`);
+                    const btn = nameEl.querySelector('.reaction-btn');
+                    nameEl.textContent = name;
+                    if (btn) {
+                        nameEl.appendChild(btn); // Re-add the button
+                    }
+                };
+                
+                updatePlayerName('south', playerNames[southPlayer]);
+                updatePlayerName('north', playerNames[northPlayer]);
+                updatePlayerName('east', playerNames[eastPlayer]);
+                updatePlayerName('west', playerNames[westPlayer]);
 
                 // Update team colors in player info
                 const getTeamInfo = (pos) => {
@@ -3218,6 +3369,7 @@
                 isMultiplayer = false;
                 myPosition = 'south';
                 gameCode = '';
+                gameState = 'INIT';
                 resetLobby();
 
                 // Hide share and menu buttons
@@ -3458,14 +3610,9 @@
                 document.getElementById('kick-player-modal').style.display = 'none';
                 document.getElementById('about-modal').style.display = 'none';
 
-                // Show/hide host-only options
-                if (isMultiplayer && isHost) {
-                    document.getElementById('kick-player-btn').style.display = 'block';
-                    document.getElementById('host-link-btn').style.display = 'block';
-                } else {
-                    document.getElementById('kick-player-btn').style.display = 'none';
-                    document.getElementById('host-link-btn').style.display = 'none';
-                }
+                // Hide kick player and host link buttons (removed features)
+                document.getElementById('kick-player-btn').style.display = 'none';
+                document.getElementById('host-link-btn').style.display = 'none';
 
                 showModal();
             }
@@ -3603,6 +3750,112 @@
             document.getElementById('join-team-blue-btn').addEventListener('click', () => {
                 joinTeam('blue');
             });
+
+            // --- REACTION SYSTEM ---
+            const reactionPicker = document.getElementById('reaction-picker');
+            let reactionPickerVisible = false;
+
+            // Show reaction button for human players
+            function updateReactionButtons() {
+                const southBtn = document.getElementById('reaction-btn-south');
+                if (southBtn) {
+                    southBtn.style.display = 'inline-block';
+                }
+                
+                // In multiplayer, show for other human players
+                if (isMultiplayer) {
+                    ['north', 'east', 'west'].forEach(pos => {
+                        const btn = document.getElementById(`reaction-btn-${pos}`);
+                        if (btn && lobbyPlayers[pos] && players[pos] && !players[pos].isAI) {
+                            btn.style.display = 'inline-block';
+                        }
+                    });
+                }
+            }
+
+            // Handle reaction button clicks for all positions
+            function setupReactionListeners() {
+                ['south', 'north', 'east', 'west'].forEach(pos => {
+                    const btn = document.getElementById(`reaction-btn-${pos}`);
+                    if (btn) {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            console.log(`Reaction button clicked for ${pos}`);
+                            if (reactionPickerVisible) {
+                                reactionPicker.style.display = 'none';
+                                reactionPickerVisible = false;
+                            } else {
+                                const rect = btn.getBoundingClientRect();
+                                reactionPicker.style.left = rect.left + 'px';
+                                reactionPicker.style.top = (rect.bottom + 5) + 'px';
+                                reactionPicker.style.display = 'flex';
+                                reactionPicker.dataset.position = pos;
+                                reactionPickerVisible = true;
+                                console.log('Reaction picker shown');
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Set up listeners immediately
+            setupReactionListeners();
+
+            // Close picker when clicking outside
+            document.addEventListener('click', (e) => {
+                if (reactionPickerVisible && !reactionPicker.contains(e.target)) {
+                    reactionPicker.style.display = 'none';
+                    reactionPickerVisible = false;
+                }
+            });
+
+            // Handle reaction selection
+            document.querySelectorAll('.reaction-option').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const emoji = e.target.dataset.emoji;
+                    // The picker stores the visual position, but we need to send the logical position
+                    const visualPos = reactionPicker.dataset.position || 'south';
+                    const logicalPos = getLogicalPosition(visualPos);
+                    console.log(`Sending reaction: ${emoji} from visual ${visualPos} (logical ${logicalPos})`);
+                    sendReaction(logicalPos, emoji);
+                    reactionPicker.style.display = 'none';
+                    reactionPickerVisible = false;
+                });
+            });
+
+            console.log('Reaction system initialized');
+
+            // Update reaction buttons when game starts
+            updateReactionButtons();
+
+            function sendReaction(position, emoji) {
+                // Show reaction locally first
+                showReaction(position, emoji);
+                
+                // In multiplayer, send to other players
+                if (isMultiplayer) {
+                    if (isHost) {
+                        // Host broadcasts to all guests
+                        broadcast({ type: 'reaction', position: position, emoji: emoji });
+                    } else {
+                        // Guest sends to host (host will broadcast to others)
+                        broadcast({ type: 'reaction', position: position, emoji: emoji });
+                    }
+                }
+            }
+
+            function showReaction(position, emoji) {
+                const visualPos = getVisualPosition(position);
+                const reactionEl = document.getElementById(`reaction-${visualPos}`);
+                reactionEl.textContent = emoji;
+                reactionEl.style.display = 'block';
+                
+                // Hide after 8 seconds
+                setTimeout(() => {
+                    reactionEl.style.display = 'none';
+                }, 8000);
+            }
 
             // --- START ---
             showMainMenu();
