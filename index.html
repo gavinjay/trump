@@ -70,15 +70,15 @@
 
         /* Status Bar */
         #status-bar {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
             align-items: center;
             padding: 10px 20px;
             background-color: var(--table-green-dark);
             border-bottom: 2px solid rgba(0, 0, 0, 0.3);
             font-size: 1rem;
             font-weight: 600;
-            position: relative;
+            gap: 20px;
         }
 
         /* Score Bar */
@@ -117,12 +117,10 @@
         }
 
         #trump-display {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
             text-align: center;
             font-size: 1.3rem;
             font-weight: 700;
+            justify-self: center;
         }
 
         #status-message {
@@ -136,14 +134,14 @@
             display: flex;
             gap: 8px;
             align-items: center;
-            position: absolute;
-            left: 20px;
+            justify-self: start;
         }
 
         #status-icons {
             display: flex;
             gap: 8px;
             align-items: center;
+            justify-self: end;
         }
 
         .icon-btn {
@@ -435,27 +433,9 @@
             font-size: 1.8rem;
         }
 
-        .modal-content h3 {
-            margin-top: 20px;
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-            color: var(--table-green-dark);
-        }
-
         .modal-content p {
             font-size: 1.1rem;
             margin-bottom: 25px;
-        }
-
-        .modal-content ul {
-            margin: 10px 0;
-            padding-left: 25px;
-        }
-
-        .modal-content li {
-            margin: 8px 0;
-            font-size: 0.95rem;
-            line-height: 1.4;
         }
 
         #trump-selection-buttons {
@@ -1149,7 +1129,7 @@
         <div id="modal-overlay">
             <!-- Main Menu Modal -->
             <div id="main-menu-modal" class="modal-content" style="display: none;">
-                <h2>Main Menu</h2>
+                <h2>New Game</h2>
 
                 <!-- Initial Menu -->
                 <div id="menu-main">
@@ -1230,55 +1210,48 @@
             </div>
 
             <!-- Help Modal -->
-            <div id="help-modal" class="modal-content" style="display: none; max-width: 600px; max-height: 80vh; overflow-y: auto; text-align: left;">
-                <h2>How to Play Trump (Court Piece)</h2>
+            <div id="help-modal" class="modal-content" style="display: none; max-width: 500px; max-height: 80vh; overflow-y: scroll; text-align: left; padding: 15px; font-size: 0.85rem;">
+                <h2 style="margin: 0 0 10px 0; font-size: 1.3rem;">How to Play Trump</h2>
                 
-                <h3>Overview</h3>
-                <p>Trump is a 4-player trick-taking card game played in teams. Team Red (South & North) vs Team Blue (East & West). First team to win 7 rounds wins the game!</p>
+                <h3 style="font-size: 1rem; margin: 12px 0 6px 0;">Overview</h3>
+                <p style="margin: 5px 0; font-size: 0.85rem;">4-player team game. Team Red (South & North) vs Team Blue (East & West). First to 7 games wins!</p>
                 
-                <h3>Game Setup</h3>
-                <ul>
-                    <li>Each player receives 13 cards from a standard 52-card deck</li>
-                    <li>Players are dealt 5 cards initially for trump selection</li>
-                    <li>The trump caller selects the trump suit</li>
-                    <li>Remaining 8 cards are dealt after trump is chosen</li>
+                <h3 style="font-size: 1rem; margin: 12px 0 6px 0;">Setup</h3>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                    <li style="margin: 3px 0; font-size: 0.85rem;">Each player gets 13 cards</li>
+                    <li style="margin: 3px 0; font-size: 0.85rem;">5 cards dealt first for trump selection</li>
+                    <li style="margin: 3px 0; font-size: 0.85rem;">Remaining 8 cards dealt after trump chosen</li>
                 </ul>
                 
-                <h3>Trump Selection</h3>
-                <ul>
-                    <li>The winning team from the previous round selects trump</li>
-                    <li>In the first round, South (bottom player) selects trump</li>
-                    <li>Trump suit beats all other suits regardless of rank</li>
+                <h3 style="font-size: 1rem; margin: 12px 0 6px 0;">Trump Selection</h3>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                    <li style="margin: 3px 0; font-size: 0.85rem;">Winning team picks trump</li>
+                    <li style="margin: 3px 0; font-size: 0.85rem;">Trump beats all other suits</li>
                 </ul>
                 
-                <h3>Playing Cards</h3>
-                <ul>
-                    <li>The trump caller leads the first trick</li>
-                    <li>Players must follow the suit that was led if possible</li>
-                    <li>If you can't follow suit, you may play any card (including trump)</li>
-                    <li>Highest card of the led suit wins, unless trump is played</li>
-                    <li>Highest trump card wins the trick</li>
-                    <li>Winner of each trick leads the next trick</li>
+                <h3 style="font-size: 1rem; margin: 12px 0 6px 0;">Playing</h3>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                    <li style="margin: 3px 0; font-size: 0.85rem;">Must follow suit if possible</li>
+                    <li style="margin: 3px 0; font-size: 0.85rem;">Highest card of led suit wins (unless trump played)</li>
+                    <li style="margin: 3px 0; font-size: 0.85rem;">Winner leads next hand</li>
                 </ul>
                 
-                <h3>Scoring</h3>
-                <ul>
-                    <li>Each trick won counts as 1 point for your team</li>
-                    <li>First team to win 7 tricks in a round wins that round</li>
-                    <li>First team to win 7 rounds wins the game</li>
-                    <li><strong>COAT:</strong> Winning 7-0 (opponent scores no rounds)</li>
+                <h3 style="font-size: 1rem; margin: 12px 0 6px 0;">Scoring</h3>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                    <li style="margin: 3px 0; font-size: 0.85rem;">First to 7 hands wins the game</li>
+                    <li style="margin: 3px 0; font-size: 0.85rem;">First to 7 games wins the match</li>
+                    <li style="margin: 3px 0; font-size: 0.85rem;"><strong>COAT:</strong> 7-0 victory</li>
                 </ul>
                 
-                <h3>Special Rule: Ace Catch King</h3>
-                <ul>
-                    <li>If the King of trump and Ace of trump are played in the same trick by opposing teams, the team with the Ace wins the entire game instantly!</li>
-                    <li>This only applies when they're on different teams</li>
+                <h3 style="font-size: 1rem; margin: 12px 0 6px 0;">Special Rules</h3>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                    <li style="margin: 3px 0; font-size: 0.85rem;"><strong>Ace Catch King:</strong> If King & Ace of trump played by opposing teams, Ace team wins match instantly!</li>
+                    <li style="margin: 3px 0; font-size: 0.85rem;"><strong>No Trumps:</strong> If any player has no trump cards, redeal</li>
                 </ul>
                 
-                <h3>Card Rankings</h3>
-                <p>Ace (highest) → King → Queen → Jack → 10 → 9 → 8 → 7 → 6 → 5 → 4 → 3 → 2 (lowest)</p>
+                <p style="margin: 10px 0 5px 0; font-size: 0.8rem;"><strong>Card Ranks:</strong> A, K, Q, J, 10, 9, 8, 7, 6, 5, 4, 3, 2</p>
                 
-                <button class="menu-btn menu-btn-primary" id="close-help-btn">Got it!</button>
+                <button class="menu-btn menu-btn-primary" id="close-help-btn" style="width: 100%; margin-top: 15px; padding: 10px; cursor: pointer;">Got it!</button>
             </div>
 
             <!-- Share Modal -->
@@ -1301,8 +1274,7 @@
             <!-- Game Menu Modal -->
             <div id="game-menu-modal" class="modal-content" style="display: none; max-width: 400px;">
                 <h2>Game Menu</h2>
-                <button class="menu-btn menu-btn-primary" id="restart-game-btn">Restart Game</button>
-                <button class="menu-btn menu-btn-secondary" id="join-different-game-btn">Join Different Game</button>
+                <button class="menu-btn menu-btn-primary" id="new-game-btn">New Game</button>
                 <button class="menu-btn menu-btn-secondary" id="kick-player-btn" style="display: none;">Kick Player</button>
                 <button class="menu-btn menu-btn-secondary" id="host-link-btn" style="display: none;">Host Link</button>
                 <button class="menu-btn menu-btn-secondary" id="about-btn">About</button>
@@ -1320,10 +1292,10 @@
             <!-- About Modal -->
             <div id="about-modal" class="modal-content" style="display: none; max-width: 500px; text-align: center;">
                 <h2>About Trump</h2>
-                <p style="font-size: 1rem; margin: 20px 0;">Made by <strong>gavinjayg</strong><br><a href="https://9it.com" target="_blank" style="color: var(--table-green-dark); text-decoration: none;">9it.com</a></p>
-                <p style="font-size: 0.95rem; line-height: 1.6; text-align: left; margin: 20px 0;">This game was made to remember and honour a childhood classic, trump. (in no relation to donnie)</p>
-                <p style="font-size: 0.95rem; line-height: 1.6; text-align: left; margin: 20px 0;">... probably based on an incorrect understanding of the original rules of some other game, it is a guyanese classic.</p>
-                <p style="font-size: 0.95rem; line-height: 1.6; text-align: left; margin: 20px 0; font-style: italic;">do not forget to grab a rum and coke and a cuttaz</p>
+                <p style="font-size: 1rem; margin: 20px 0;">Made by <strong>gavinjay</strong><br><a href="https://g9it.com" target="_blank" style="color: var(--table-green-dark); text-decoration: none;">g9it.com</a></p>
+                <p style="font-size: 0.95rem; line-height: 1.6; text-align: left; margin: 20px 0;">I created this game to celebrate a childhood classic: Trump (In no relation to donnie), A Guyanese 🇬🇾 classic!!</p>
+                <p style="font-size: 0.95rem; line-height: 1.6; text-align: left; margin: 20px 0;">Turns out... is very specific to Guyana and similar rules don't exist elsewhere! (probably based on an incorrect understanding of the original rules of some other game)</p>
+                <p style="font-size: 0.95rem; line-height: 1.6; text-align: left; margin: 20px 0; font-style: italic;">Don't forget to grab a rum and coke and a cuttaz!!</p>
                 <button class="menu-btn menu-btn-primary" id="close-about-btn">Close</button>
             </div>
 
@@ -1803,6 +1775,37 @@
                     }
                 }
                 renderAllHands();
+
+                // Check if any player has NO trump cards
+                let playerWithNoTrumps = null;
+                for (const pos of POSITIONS) {
+                    const hasTrump = players[pos].hand.some(card => card.suit === trumpSuit);
+                    if (!hasTrump) {
+                        playerWithNoTrumps = pos;
+                        break;
+                    }
+                }
+
+                if (playerWithNoTrumps) {
+                    // Someone has no trumps - redeal
+                    const playerTeam = players[playerWithNoTrumps].team;
+                    const teamName = playerTeam === 'teamRed' ? 'RED' : 'BLUE';
+                    const teamColor = playerTeam === 'teamRed' ? 'var(--team-red)' : 'var(--team-blue)';
+                    
+                    console.log(`${playerWithNoTrumps} has no trumps! Redealing...`);
+                    specialEventMessage.style.color = teamColor;
+                    showSpecialEventMessage(`${teamName}\nNO TRUMPS\nRE-DEAL!`, 2000);
+                    
+                    setTimeout(() => {
+                        specialEventMessage.style.color = 'var(--highlight-player)';
+                        // Restart the hand with same trump caller
+                        if (isMultiplayer && isHost) {
+                            broadcast({ type: 'redeal' });
+                        }
+                        startNewHand(playerTeam); // Same team picks trump again
+                    }, 2200);
+                    return; // Don't start the game
+                }
 
                 // 4. Start first trick
                 gameState = 'PLAYING';
@@ -2623,8 +2626,7 @@
             function broadcastLobbyState() {
                 broadcast({ 
                     type: 'lobbyState', 
-                    lobby: lobbyPlayers,
-                    inGame: gameState !== 'INIT'
+                    lobby: lobbyPlayers
                 });
             }
 
@@ -2671,19 +2673,10 @@
 
                     conn.on('close', () => {
                         console.log('Player disconnected');
-                        // Remove from lobby and convert back to AI
+                        // Remove from lobby
                         for (const pos of POSITIONS) {
                             if (lobbyPlayers[pos] && lobbyPlayers[pos].peerId === conn.peer) {
-                                const disconnectedPos = pos;
                                 lobbyPlayers[pos] = null;
-                                
-                                // If game in progress, convert back to AI
-                                if (gameState !== 'INIT' && players[disconnectedPos]) {
-                                    players[disconnectedPos].isAI = true;
-                                    playerNames[disconnectedPos] = capitalize(disconnectedPos) + ' (AI)';
-                                    updatePlayerAreaNames();
-                                    updateStatusMessage(`${capitalize(disconnectedPos)} disconnected. AI taking over.`);
-                                }
                                 break;
                             }
                         }
@@ -2781,8 +2774,8 @@
 
                 switch (data.type) {
                     case 'joinLobby':
-                        // Guest joining lobby (host receives this)
-                        if (isHost) {
+                        // Guest joining lobby (host receives this) - ONLY BEFORE GAME STARTS
+                        if (isHost && gameState === 'INIT') {
                             if (data.position) {
                                 // Guest selected a position
                                 if (!lobbyPlayers[data.position]) {
@@ -2791,17 +2784,6 @@
                                         peerId: data.peerId,
                                         position: data.position
                                     };
-
-                                    // If game is in progress, take over AI position
-                                    if (gameState !== 'INIT' && players[data.position]) {
-                                        players[data.position].isAI = false;
-                                        playerNames[data.position] = data.name;
-                                        updatePlayerAreaNames();
-                                        updateStatusMessage(`${data.name} joined as ${capitalize(data.position)}!`);
-                                        
-                                        // Send current game state to new player
-                                        sendGameState();
-                                    }
 
                                     renderLobby();
                                     broadcastLobbyState();
@@ -2825,9 +2807,16 @@
                                         type: 'availableSlots', 
                                         slots: availableSlots,
                                         lobby: lobbyPlayers,
-                                        inGame: gameState !== 'INIT'
+                                        inGame: false
                                     });
                                 }
+                            }
+                        } else if (isHost && gameState !== 'INIT') {
+                            // Game already started, reject join
+                            const conn = connections.find(c => c.peer === data.peerId);
+                            if (conn) {
+                                conn.send({ type: 'gameInProgress' });
+                                conn.close();
                             }
                         }
                         break;
@@ -2844,16 +2833,10 @@
                                 }
                             }
                             
-                            // If joining mid-game, wait for game state
-                            if (data.inGame) {
-                                updateStatusMessage("Joining game in progress...");
-                                hideModal(); // Hide any open modals
-                            } else {
-                                // Only show lobby if we haven't selected a position yet
-                                if (myPosition) {
-                                    showLobby();
-                                    renderLobby();
-                                }
+                            // Show lobby if we have a position
+                            if (myPosition) {
+                                showLobby();
+                                renderLobby();
                             }
                         }
                         break;
@@ -2911,6 +2894,13 @@
                         }
                         break;
 
+                    case 'redeal':
+                        // Host triggered a redeal due to no trumps
+                        if (!isHost) {
+                            updateStatusMessage("Redealing due to no trumps...");
+                        }
+                        break;
+
                     case 'replayGame':
                         // Host started a new game
                         if (!isHost) {
@@ -2923,6 +2913,18 @@
                         // Guest receives available slots from host
                         if (!isHost) {
                             showTeamSelection(data.slots, data.lobby, data.inGame);
+                        }
+                        break;
+
+                    case 'gameInProgress':
+                        // Game already started, can't join
+                        if (!isHost) {
+                            joinStatus.textContent = 'Game already in progress. Cannot join.';
+                            joinStatus.className = 'status-error';
+                            if (peer) {
+                                peer.destroy();
+                                peer = null;
+                            }
                         }
                         break;
                 }
@@ -3403,21 +3405,10 @@
                 hideModal();
             });
 
-            document.getElementById('restart-game-btn').addEventListener('click', () => {
-                if (confirm('Are you sure you want to restart the game?')) {
-                    hideModal();
-                    if (isMultiplayer && isHost) {
-                        broadcast({ type: 'replayGame' });
-                    }
-                    initMatch();
-                }
-            });
-
-            document.getElementById('join-different-game-btn').addEventListener('click', () => {
-                if (confirm('Leave this game and join a different one?')) {
-                    backToMenu();
-                    showJoinView();
-                }
+            document.getElementById('new-game-btn').addEventListener('click', () => {
+                // Hide game menu and show main menu
+                document.getElementById('game-menu-modal').style.display = 'none';
+                backToMenu();
             });
 
             document.getElementById('kick-player-btn').addEventListener('click', () => {
@@ -3510,28 +3501,18 @@
                 const player = lobbyPlayers[position];
                 if (!player) return;
 
-                if (confirm(`Kick ${player.name}?`)) {
-                    // Find and close the connection
-                    const conn = connections.find(c => c.peer === player.peerId);
-                    if (conn) {
-                        conn.close();
-                    }
-
-                    // Remove from lobby
-                    lobbyPlayers[position] = null;
-
-                    // Convert to AI if game in progress
-                    if (gameState !== 'INIT' && players[position]) {
-                        players[position].isAI = true;
-                        playerNames[position] = capitalize(position) + ' (AI)';
-                        updatePlayerAreaNames();
-                        updateStatusMessage(`${player.name} was kicked. AI taking over.`);
-                    }
-
-                    renderLobby();
-                    broadcastLobbyState();
-                    hideModal();
+                // Find and close the connection
+                const conn = connections.find(c => c.peer === player.peerId);
+                if (conn) {
+                    conn.close();
                 }
+
+                // Remove from lobby
+                lobbyPlayers[position] = null;
+
+                renderLobby();
+                broadcastLobbyState();
+                hideModal();
             }
 
             // Make kickPlayer available globally
