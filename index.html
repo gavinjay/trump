@@ -1793,9 +1793,20 @@
                 updateScoreDisplay();
 
                 // Check for game over
-                if (scores.teamRed === 7 || scores.teamBlue === 7) { // UPDATED
-                    const gameWinner = scores.teamRed === 7 ? 'teamRed' : 'teamBlue'; // UPDATED
-                    showGameOver(gameWinner, "Reached 7 points!");
+                if (scores.teamRed === 7 || scores.teamBlue === 7) {
+                    const gameWinner = scores.teamRed === 7 ? 'teamRed' : 'teamBlue';
+                    const loserScore = gameWinner === 'teamRed' ? scores.teamBlue : scores.teamRed;
+
+                    // Check for COAT (7-0 victory)
+                    if (loserScore === 0) {
+                        const winnerName = gameWinner === 'teamRed' ? 'Team Red' : 'Team Blue';
+                        showSpecialEventMessage(`COAT!\n${winnerName} wins 7-0!`);
+                        setTimeout(() => {
+                            showGameOver(gameWinner, "COAT! (7-0)");
+                        }, 3000);
+                    } else {
+                        showGameOver(gameWinner, "Reached 7 points!");
+                    }
                 } else {
                     // Start next hand - winning team picks trump
                     setTimeout(() => startNewHand(handWinner), 3000); // Pause before next hand
