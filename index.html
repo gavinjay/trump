@@ -1086,6 +1086,29 @@
             };
             const AI_THINK_TIME = 1000; // ms
 
+            // Position rotation mappings - maps logical position to visual position based on viewer
+            // Visual positions: south=bottom, west=left, north=top, east=right
+            const ROTATION_MAP = {
+                south: { south: 'south', west: 'west', north: 'north', east: 'east' },
+                north: { north: 'south', east: 'west', south: 'north', west: 'east' },
+                east: { east: 'south', south: 'west', west: 'north', north: 'east' },
+                west: { west: 'south', north: 'west', east: 'north', south: 'east' }
+            };
+
+            // Get visual position for a logical position (based on myPosition)
+            function getVisualPosition(logicalPos) {
+                return ROTATION_MAP[myPosition][logicalPos];
+            }
+
+            // Get logical position from visual position (inverse mapping)
+            function getLogicalPosition(visualPos) {
+                const map = ROTATION_MAP[myPosition];
+                for (const [logical, visual] of Object.entries(map)) {
+                    if (visual === visualPos) return logical;
+                }
+                return visualPos;
+            }
+
             // --- DOM ELEMENTS ---
             const gameContainer = document.getElementById('game-container');
             const statusBar = {
@@ -1948,7 +1971,8 @@
              */
              function renderPlayedCard(player, card) {
                 const cardEl = createCardElement(card);
-                const slotEl = trickCards[player];
+                const visualPos = getVisualPosition(player);
+                const slotEl = trickCards[visualPos];
                 slotEl.innerHTML = '';
                 slotEl.appendChild(cardEl);
              }
@@ -2030,8 +2054,10 @@
             }
 
             function highlightActivePlayer(player) {
+                // Highlight the visual position that corresponds to the logical player
+                const visualPos = getVisualPosition(player);
                 POSITIONS.forEach(pos => {
-                   playerAreas[pos].classList.toggle('active-player', pos === player);
+                   playerAreas[pos].classList.toggle('active-player', pos === visualPos);
                 });
             }
 
@@ -2489,12 +2515,18 @@
                     }
                 }
 
-                // Update card counts from state
+                // Update card counts from state (mapped to visual positions)
                 if (state.cardCounts) {
-                    cardCounts.south.textContent = state.cardCounts.south;
-                    cardCounts.north.textContent = state.cardCounts.north;
-                    cardCounts.east.textContent = state.cardCounts.east;
-                    cardCounts.west.textContent = state.cardCounts.west;
+                    // Get which logical player appears in each visual position
+                    const southPlayer = getLogicalPosition('south');
+                    const northPlayer = getLogicalPosition('north');
+                    const eastPlayer = getLogicalPosition('east');
+                    const westPlayer = getLogicalPosition('west');
+
+                    cardCounts.south.textContent = state.cardCounts[southPlayer];
+                    cardCounts.north.textContent = state.cardCounts[northPlayer];
+                    cardCounts.east.textContent = state.cardCounts[eastPlayer];
+                    cardCounts.west.textContent = state.cardCounts[westPlayer];
                 }
 
                 updateScoreDisplay();
@@ -2677,13 +2709,42 @@
             }
 
             /**
-             * Update player area displays with names
+             * Update player area displays with names (rotated based on myPosition)
              */
             function updatePlayerAreaNames() {
-                document.querySelector('#player-south-area .player-name').textContent = playerNames.south;
-                document.querySelector('#player-north-area .player-name').textContent = playerNames.north;
-                document.querySelector('#player-east-area .player-name').textContent = playerNames.east;
-                document.querySelector('#player-west-area .player-name').textContent = playerNames.west;
+                // Get which logical player appears in each visual position
+                const southPlayer = getLogicalPosition('south');
+                const northPlayer = getLogicalPosition('north');
+                const eastPlayer = getLogicalPosition('east');
+                const westPlayer = getLogicalPosition('west');
+
+                document.querySelector('#player-south-area .player-name').textContent = playerNames[southPlayer];
+                document.querySelector('#player-north-area .player-name').textContent = playerNames[northPlayer];
+                document.querySelector('#player-east-area .player-name').textContent = playerNames[eastPlayer];
+                document.querySelector('#player-west-area .player-name').textContent = playerNames[westPlayer];
+
+                // Update team colors in player info
+                const getTeamInfo = (pos) => {
+                    const team = (pos === 'south' || pos === 'north') ? 'teamRed' : 'teamBlue';
+                    const teamClass = team === 'teamRed' ? 'team-red-text' : 'team-blue-text';
+                    const teamName = team === 'teamRed' ? 'Team Red' : 'Team Blue';
+                    return `<span class="${teamClass}">${teamName}</span>`;
+                };
+
+                document.querySelector('#player-south-area .player-info').innerHTML =
+                    `${getTeamInfo(southPlayer)} | <span id="card-count-south">0</span> cards`;
+                document.querySelector('#player-north-area .player-info').innerHTML =
+                    `${getTeamInfo(northPlayer)} | <span id="card-count-north">0</span> cards`;
+                document.querySelector('#player-east-area .player-info').innerHTML =
+                    `${getTeamInfo(eastPlayer)} | <span id="card-count-east">0</span> cards`;
+                document.querySelector('#player-west-area .player-info').innerHTML =
+                    `${getTeamInfo(westPlayer)} | <span id="card-count-west">0</span> cards`;
+
+                // Re-cache card count elements since we rebuilt the HTML
+                cardCounts.south = document.getElementById('card-count-south');
+                cardCounts.north = document.getElementById('card-count-north');
+                cardCounts.east = document.getElementById('card-count-east');
+                cardCounts.west = document.getElementById('card-count-west');
             }
 
             /**
