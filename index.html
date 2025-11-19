@@ -1074,11 +1074,20 @@
                 // --- Deal 5 cards for trump selection ---
                 deck = createDeck();
                 shuffleDeck(deck);
+
+                // Determine which positions are human based on lobby
+                let isNorthAI = true, isEastAI = true, isWestAI = true;
+                if (isMultiplayer && isHost) {
+                    isNorthAI = !lobbyPlayers.north;
+                    isEastAI = !lobbyPlayers.east;
+                    isWestAI = !lobbyPlayers.west;
+                }
+
                 players = {
                     south: { hand: [], isAI: false, team: 'teamRed' },
-                    east: { hand: [], isAI: true, team: 'teamBlue' },
-                    north: { hand: [], isAI: isMultiplayer ? false : true, team: 'teamRed' }, // Human in multiplayer
-                    west: { hand: [], isAI: true, team: 'teamBlue' },
+                    east: { hand: [], isAI: isEastAI, team: 'teamBlue' },
+                    north: { hand: [], isAI: isNorthAI, team: 'teamRed' },
+                    west: { hand: [], isAI: isWestAI, team: 'teamBlue' },
                 };
                 currentTrick = [];
                 handTrickCounts = { teamRed: 0, teamBlue: 0 };
@@ -1096,9 +1105,14 @@
                     }
                 }
 
+                // Sort hands for all human players
                 sortHand(players.south.hand);
-                if (isMultiplayer) {
-                    sortHand(players.north.hand);
+                if (isMultiplayer && isHost) {
+                    for (const pos of ['north', 'east', 'west']) {
+                        if (lobbyPlayers[pos]) {
+                            sortHand(players[pos].hand);
+                        }
+                    }
                 }
                 renderAllHands();
 
@@ -1123,11 +1137,20 @@
                 // Reset hands and deck
                 deck = createDeck();
                 shuffleDeck(deck);
+
+                // Determine which positions are human based on lobby
+                let isNorthAI = true, isEastAI = true, isWestAI = true;
+                if (isMultiplayer && isHost) {
+                    isNorthAI = !lobbyPlayers.north;
+                    isEastAI = !lobbyPlayers.east;
+                    isWestAI = !lobbyPlayers.west;
+                }
+
                 players = {
                     south: { hand: [], isAI: false, team: 'teamRed' },
-                    east: { hand: [], isAI: true, team: 'teamBlue' },
-                    north: { hand: [], isAI: isMultiplayer ? false : true, team: 'teamRed' },
-                    west: { hand: [], isAI: true, team: 'teamBlue' },
+                    east: { hand: [], isAI: isEastAI, team: 'teamBlue' },
+                    north: { hand: [], isAI: isNorthAI, team: 'teamRed' },
+                    west: { hand: [], isAI: isWestAI, team: 'teamBlue' },
                 };
 
                 // Reset trick data
@@ -1155,11 +1178,25 @@
                     }
                 }
 
+                // Sort hands for all human players
                 sortHand(players.south.hand);
+                if (isMultiplayer && isHost) {
+                    for (const pos of ['north', 'east', 'west']) {
+                        if (lobbyPlayers[pos]) {
+                            sortHand(players[pos].hand);
+                        }
+                    }
+                }
                 renderAllHands();
 
                 // 2. Start first trick
                 gameState = 'PLAYING'; // <-- FIX: Set to PLAYING *before* calling nextTurn
+
+                // Send state to guests
+                if (isMultiplayer && isHost) {
+                    sendGameState();
+                }
+
                 setTimeout(() => {
                     updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. ${capitalize(trickLeader)} starts.`);
                     nextTurn();
@@ -1296,24 +1333,26 @@
 
                 // Re-sort human hands with all 13 cards
                 sortHand(players.south.hand);
-                if (isMultiplayer) {
-                    sortHand(players.north.hand);
+                if (isMultiplayer && isHost) {
+                    for (const pos of ['north', 'east', 'west']) {
+                        if (lobbyPlayers[pos]) {
+                            sortHand(players[pos].hand);
+                        }
+                    }
                 }
                 renderAllHands();
 
-                // Broadcast trump selection in multiplayer
+                // 4. Start first trick
+                gameState = 'PLAYING';
+
+                // Broadcast trump selection and game state in multiplayer
                 if (isMultiplayer && isHost) {
                     broadcast({ type: 'trumpSelected', suit: suit });
                     sendGameState();
                 }
 
-                // 4. Start first trick
-                gameState = 'PLAYING';
                 setTimeout(() => {
                     updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. ${capitalize(trickLeader)} starts.`);
-                    if (isMultiplayer && isHost) {
-                        sendGameState();
-                    }
                     nextTurn();
                 }, 1000);
             }
@@ -2232,6 +2271,7 @@
                             if (player && player.peerId === data.peerId && !lobbyPlayers[data.toPos]) {
                                 lobbyPlayers[data.fromPos] = null;
                                 lobbyPlayers[data.toPos] = player;
+                                player.position = data.toPos; // Update player's position
                                 renderLobby();
                                 broadcastLobbyState();
                             }
@@ -2301,6 +2341,10 @@
                 if (myPosition && state.myHand) {
                     players[myPosition].hand = state.myHand;
                     players[myPosition].isAI = false;
+                    // Sort hand if trump is set
+                    if (trumpSuit) {
+                        sortHand(players[myPosition].hand);
+                    }
                 }
 
                 // Update card counts from state
