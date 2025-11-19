@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Trump (Court Piece)</title>
     <!-- We'll use the 'Inter' font from Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,6 +27,15 @@
         }
 
         /* Basic Setup */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            height: 100%;
+            height: -webkit-fill-available;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #333;
@@ -37,9 +46,11 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            min-height: -webkit-fill-available;
             overflow: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            touch-action: manipulation;
         }
 
         #game-container {
@@ -148,10 +159,10 @@
         }
 
         #player-south-area {
-            bottom: 10px;
+            bottom: 130px;
             left: 50%;
             transform: translateX(-50%);
-            /* South's hand is separate */
+            z-index: 50;
         }
 
         #player-north-area {
@@ -734,9 +745,129 @@
                 transform: translateY(-10px) scale(1.1);
             }
             #player-south-area {
-                display: none; /* Hide the area, just show the hand */
+                bottom: 90px;
+                font-size: 0.8rem;
             }
-            /* REMOVED #won-tricks-south */
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 480px) {
+            html, body {
+                height: 100%;
+                height: -webkit-fill-available;
+                overflow: hidden;
+                position: fixed;
+                width: 100%;
+            }
+
+            #game-container {
+                max-height: none;
+                height: 100%;
+                height: -webkit-fill-available;
+                border-radius: 0;
+                border-width: 0;
+            }
+
+            .card, .card-back {
+                width: 45px;
+                height: 68px;
+                font-size: 0.7rem;
+                border-radius: 4px;
+            }
+
+            .card .rank-suit {
+                font-size: 0.9rem;
+            }
+
+            #player-hand-south {
+                bottom: 10px;
+                height: 75px;
+            }
+
+            #player-hand-south .card {
+                margin-left: -22px;
+            }
+
+            #player-south-area {
+                bottom: 95px;
+                padding: 5px 8px;
+                min-width: 80px;
+            }
+
+            .player-area {
+                padding: 5px 8px;
+                min-width: 70px;
+            }
+
+            .player-name {
+                font-size: 0.75rem;
+            }
+
+            .player-info {
+                font-size: 0.65rem;
+            }
+
+            #status-bar {
+                padding: 6px 10px;
+                font-size: 0.7rem;
+            }
+
+            #trump-display {
+                font-size: 0.9rem;
+            }
+
+            .modal-content {
+                width: 90%;
+                max-height: 85vh;
+                overflow-y: auto;
+                padding: 15px;
+            }
+
+            .menu-btn {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+
+            .trump-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+
+            #trick-card-south, #trick-card-north,
+            #trick-card-east, #trick-card-west {
+                position: absolute;
+            }
+
+            #trick-card-south { top: 35px; }
+            #trick-card-north { top: -35px; }
+            #trick-card-west { left: -35px; }
+            #trick-card-east { left: 35px; }
+
+            /* Lobby styles for mobile */
+            .lobby-teams {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .lobby-player {
+                padding: 8px;
+                font-size: 0.8rem;
+            }
+
+            #name-input {
+                font-size: 0.9rem;
+                padding: 10px;
+            }
+
+            /* Safe area for iPhone notch */
+            #status-bar {
+                padding-top: max(6px, env(safe-area-inset-top));
+            }
+
+            #player-hand-south {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
         }
 
         /* NEW: Special Event Overlay (Ace Catch King) */
