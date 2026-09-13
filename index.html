@@ -4,14 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Trump (Court Piece)</title>
+
+    <!-- Mobile App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Trump Card Game">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a6c3a">
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="assets/icon-152.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="assets/icon-120.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="assets/icon-76.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
     <!-- We'll use the 'Inter' font from Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- PeerJS for multiplayer -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Firebase for server-based multiplayer -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-database-compat.js"></script>
     <!-- Twemoji for consistent emoji rendering -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" integrity="sha512-/PCHE/GeV8rkUkLCnYFPJRYxD/b0p5lWDE1F3qxw2LvKxUxNW7L8W6JZvz/4f4RDYvqNjPYgxQPYzwLxNRCiGw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-database-compat.min.js"></script>
     <style>
         :root {
             --table-green: #0a6c3a;
@@ -1203,6 +1228,153 @@
             }
         }
 
+        /* Firebase Authentication UI */
+        #user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        #user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        #user-display-name {
+            flex: 1;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        #sign-out-btn {
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        #sign-out-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .auth-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-bottom: 10px;
+            background: white;
+            color: var(--text-dark);
+        }
+
+        .auth-btn:hover {
+            transform: scale(1.02);
+            border-color: var(--table-green);
+        }
+
+        .auth-btn-google {
+            border-color: #4285f4;
+        }
+
+        .auth-btn-google:hover {
+            background: #f8f9fa;
+            border-color: #4285f4;
+        }
+
+        .auth-btn-apple {
+            background: #000;
+            color: white;
+            border-color: #000;
+        }
+
+        .auth-btn-apple:hover {
+            background: #333;
+        }
+
+        .auth-btn-email {
+            background: var(--table-green-dark);
+            color: white;
+            border-color: var(--table-green-dark);
+        }
+
+        .auth-btn-email:hover {
+            background: #0b8046;
+        }
+
+        .auth-divider {
+            text-align: center;
+            margin: 15px 0;
+            color: #999;
+            font-size: 0.85rem;
+        }
+
+        #auth-modal .modal-content {
+            max-width: 400px;
+        }
+
+        #email-auth-form {
+            display: none;
+        }
+
+        #email-auth-form input {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        #email-auth-form input:focus {
+            outline: none;
+            border-color: var(--table-green);
+        }
+
+        .user-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .user-stat {
+            text-align: center;
+        }
+
+        .user-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--table-green-dark);
+        }
+
+        .user-stat-label {
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+        }
+
     </style>
 </head>
 <body>
@@ -1302,12 +1474,56 @@
             <div id="main-menu-modal" class="modal-content" style="display: none;">
                 <h2>New Game</h2>
 
+                <!-- User Profile Display (when logged in) -->
+                <div id="user-profile" style="display: none;">
+                    <img id="user-avatar" src="" alt="Profile">
+                    <div id="user-display-name"></div>
+                    <button id="sign-out-btn">Sign Out</button>
+                </div>
+
+                <!-- Sign In Button (when not logged in) -->
+                <div id="sign-in-prompt" style="display: none;">
+                    <button class="menu-btn menu-btn-secondary" id="show-auth-btn">Sign In</button>
+                    <div class="auth-divider">OR</div>
+                </div>
+
                 <!-- Initial Menu -->
                 <div id="menu-main">
                     <input type="text" id="name-input" placeholder="Enter your name" maxlength="20">
                     <button class="menu-btn menu-btn-primary" id="play-ai-btn">Play vs AI</button>
-                    <button class="menu-btn menu-btn-secondary" id="host-game-btn">Host Game</button>
-                    <button class="menu-btn menu-btn-secondary" id="join-game-btn">Join Game</button>
+                    <button class="menu-btn menu-btn-secondary" id="quick-match-btn">Quick Match</button>
+                    <button class="menu-btn menu-btn-secondary" id="play-with-friends-btn">Play with Friends</button>
+                    <button class="menu-btn menu-btn-secondary" id="host-game-btn">Host Game (P2P)</button>
+                    <button class="menu-btn menu-btn-secondary" id="join-game-btn">Join Game (P2P)</button>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
+                        <button class="menu-btn menu-btn-secondary" id="view-stats-btn">📊 View Stats</button>
+                        <button class="menu-btn menu-btn-secondary" id="view-leaderboard-btn">🏆 Leaderboard</button>
+                    </div>
+                </div>
+
+                <!-- Quick Match View -->
+                <div id="menu-quick-match" style="display: none;">
+                    <h3>Quick Match</h3>
+                    <div id="matchmaking-status" class="status-waiting">Finding opponent...</div>
+                    <div id="queue-position" style="margin: 15px 0; font-size: 0.9rem;"></div>
+                    <button class="menu-btn menu-btn-primary" id="cancel-matchmaking-btn">Cancel</button>
+                </div>
+
+                <!-- Friends View -->
+                <div id="menu-friends" style="display: none;">
+                    <h3>Play with Friends</h3>
+                    <div style="margin: 20px 0;">
+                        <p style="font-size: 0.9rem; margin-bottom: 10px;">Your Friend ID:</p>
+                        <div style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                            <p id="friend-id-display" style="font-size: 1.2rem; font-weight: 700; color: var(--table-green-dark); margin: 5px 0;"></p>
+                            <button class="copy-btn" id="copy-friend-id-btn">Copy</button>
+                        </div>
+                        <p style="font-size: 0.9rem; margin: 15px 0 10px 0;">Invite a friend:</p>
+                        <input type="text" id="friend-id-input" placeholder="Enter friend's ID" maxlength="20" style="font-family: 'Inter', sans-serif; font-size: 1rem; padding: 12px; border: 2px solid #ddd; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 10px; text-align: center;">
+                        <button class="menu-btn menu-btn-secondary" id="invite-friend-btn">Send Invite</button>
+                    </div>
+                    <div id="friends-status"></div>
+                    <button class="back-btn" id="friends-back-btn">← Back to Menu</button>
                 </div>
 
                 <!-- Host/Join Lobby View -->
@@ -1485,6 +1701,110 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Player Stats Modal -->
+            <div id="stats-modal" class="modal-content" style="display: none; max-width: 500px; text-align: left;">
+                <h2 style="text-align: center; margin-bottom: 20px;">Your Statistics</h2>
+                <div id="stats-loading" style="text-align: center; padding: 20px;">Loading stats...</div>
+                <div id="stats-content" style="display: none;">
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1.1rem;">Overall Stats</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem;">
+                            <div>Games Played: <strong id="stat-games">0</strong></div>
+                            <div>Win Rate: <strong id="stat-win-rate">0%</strong></div>
+                            <div>Wins: <strong id="stat-wins">0</strong></div>
+                            <div>Losses: <strong id="stat-losses">0</strong></div>
+                            <div>COATs: <strong id="stat-coats">0</strong></div>
+                            <div>Ace Kings: <strong id="stat-ace-kings">0</strong></div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1.1rem;">Streaks</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem;">
+                            <div>Current Streak: <strong id="stat-current-streak">0</strong></div>
+                            <div>Longest Streak: <strong id="stat-longest-streak">0</strong></div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1.1rem;">Achievements</h3>
+                        <div id="achievements-list" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            <!-- Achievements will be added here -->
+                        </div>
+                    </div>
+
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1.1rem;">Recent Games</h3>
+                        <div id="recent-games" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Game history will be added here -->
+                        </div>
+                    </div>
+                </div>
+                <button class="menu-btn menu-btn-primary" id="close-stats-btn" style="margin-top: 15px;">Close</button>
+            </div>
+
+            <!-- Leaderboard Modal -->
+            <div id="leaderboard-modal" class="modal-content" style="display: none; max-width: 600px; text-align: left;">
+                <h2 style="text-align: center; margin-bottom: 20px;">🏆 Leaderboard</h2>
+                <div id="leaderboard-loading" style="text-align: center; padding: 20px;">Loading leaderboard...</div>
+                <div id="leaderboard-content" style="display: none;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 50px 1fr 80px 80px 80px; gap: 10px; padding: 10px; background: #e0e0e0; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">
+                            <div>Rank</div>
+                            <div>Player</div>
+                            <div style="text-align: center;">Wins</div>
+                            <div style="text-align: center;">Games</div>
+                            <div style="text-align: center;">Win%</div>
+                        </div>
+                    </div>
+                    <div id="leaderboard-list" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Leaderboard entries will be added here -->
+                    </div>
+                </div>
+                <button class="menu-btn menu-btn-primary" id="close-leaderboard-btn" style="margin-top: 15px;">Close</button>
+            </div>
+
+            <!-- Authentication Modal -->
+            <div id="auth-modal" class="modal-content" style="display: none; max-width: 400px;">
+                <h2>Sign In</h2>
+                <p style="margin-bottom: 20px;">Save your progress and compete with friends!</p>
+
+                <!-- Social Login Buttons -->
+                <div id="social-auth-buttons">
+                    <button class="auth-btn auth-btn-google" id="google-sign-in-btn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M19.6 10.2272C19.6 9.51816 19.5364 8.83635 19.4182 8.18176H10V12.0499H15.3818C15.15 13.2999 14.4454 14.3590 13.3864 15.068V17.5772H16.6182C18.5091 15.8363 19.6 13.2726 19.6 10.2272Z" fill="#4285F4"/>
+                            <path d="M10 20C12.7 20 14.9636 19.1045 16.6181 17.5772L13.3863 15.068C12.4909 15.6681 11.3454 16.0227 10 16.0227C7.39545 16.0227 5.19091 14.2636 4.40455 11.9H1.06364V14.4909C2.70909 17.759 6.09091 20 10 20Z" fill="#34A853"/>
+                            <path d="M4.40454 11.9C4.20454 11.3 4.09091 10.6591 4.09091 10C4.09091 9.34091 4.20454 8.7 4.40454 8.1V5.50909H1.06364C0.386364 6.85909 0 8.38636 0 10C0 11.6136 0.386364 13.1409 1.06364 14.4909L4.40454 11.9Z" fill="#FBBC04"/>
+                            <path d="M10 3.97727C11.4682 3.97727 12.7864 4.48182 13.8227 5.47273L16.6909 2.60454C14.9591 0.990909 12.6955 0 10 0C6.09091 0 2.70909 2.24091 1.06364 5.50909L4.40455 8.1C5.19091 5.73636 7.39545 3.97727 10 3.97727Z" fill="#EA4335"/>
+                        </svg>
+                        Sign in with Google
+                    </button>
+
+                    <button class="auth-btn auth-btn-apple" id="apple-sign-in-btn">
+                        <svg width="20" height="20" viewBox="0 0 20 24" fill="white">
+                            <path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.1 22C7.79 22.05 6.8 20.68 5.96 19.47C4.25 17 2.94 12.45 4.7 9.39C5.57 7.87 7.13 6.91 8.82 6.88C10.1 6.86 11.32 7.75 12.11 7.75C12.89 7.75 14.37 6.68 15.92 6.84C16.57 6.87 18.39 7.1 19.56 8.82C19.47 8.88 17.39 10.1 17.41 12.63C17.44 15.65 20.06 16.66 20.09 16.67C20.06 16.74 19.67 18.11 18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z"/>
+                        </svg>
+                        Sign in with Apple
+                    </button>
+                </div>
+
+                <div class="auth-divider">OR</div>
+
+                <!-- Email/Password Auth -->
+                <button class="auth-btn auth-btn-email" id="email-auth-toggle-btn">Sign in with Email</button>
+
+                <div id="email-auth-form">
+                    <input type="email" id="email-input" placeholder="Email" required>
+                    <input type="password" id="password-input" placeholder="Password" required>
+                    <button class="menu-btn menu-btn-primary" id="email-sign-in-btn">Sign In</button>
+                    <button class="menu-btn menu-btn-secondary" id="email-sign-up-btn">Create Account</button>
+                    <div id="auth-error" style="color: #d32f2f; margin-top: 10px; font-size: 0.85rem;"></div>
+                </div>
+
+                <button class="back-btn" id="auth-back-btn">← Back to Menu</button>
+            </div>
         </div>
 
         <!-- NEW Special Event Overlay -->
@@ -1507,6 +1827,71 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
 
+            // --- FIREBASE INITIALIZATION ---
+            // IMPORTANT: Replace these values with your own Firebase project credentials
+            // Get these from: Firebase Console > Project Settings > General
+            const firebaseConfig = {
+                apiKey: "YOUR_API_KEY_HERE",
+                authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+                projectId: "YOUR_PROJECT_ID",
+                storageBucket: "YOUR_PROJECT_ID.appspot.com",
+                messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+                appId: "YOUR_APP_ID",
+                databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com"
+            };
+
+            // Initialize Firebase (with error handling for missing config)
+            let auth, db, rtdb;
+            let firebaseEnabled = false;
+
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                auth = firebase.auth();
+                db = firebase.firestore();
+                rtdb = firebase.database();
+                firebaseEnabled = true;
+                console.log('Firebase initialized successfully');
+            } catch (error) {
+                console.warn('Firebase not configured - app will work in guest mode only:', error);
+                firebaseEnabled = false;
+            }
+
+            // Current user state
+            let currentUser = null;
+            let userProfile = null;
+            let isAnonymous = false;
+
+            // Set up authentication state listener
+            if (firebaseEnabled) {
+                auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        currentUser = user;
+                        isAnonymous = user.isAnonymous;
+                        console.log("Signed in as:", user.uid, isAnonymous ? "(anonymous)" : "");
+
+                        // Load or create user profile
+                        if (!isAnonymous) {
+                            await loadUserProfile(user);
+                            updateUIForSignedInUser();
+                        } else {
+                            updateUIForGuestUser();
+                        }
+                    } else {
+                        // Not signed in - sign in anonymously to allow guest play
+                        try {
+                            await auth.signInAnonymously();
+                        } catch (error) {
+                            console.error("Anonymous auth error:", error);
+                        }
+                    }
+                });
+            } else {
+                // Firebase not configured - just update UI for guest mode
+                updateUIForGuestUser();
+            }
+
             // --- CONSTANTS ---
             const SUITS = ['S', 'H', 'D', 'C'];
             const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -1516,6 +1901,16 @@
                 'J': 11, 'Q': 12, 'K': 13, 'A': 14
             };
             const AI_THINK_TIME = 1000; // ms
+
+            // Achievement thresholds
+            const ACHIEVEMENTS = {
+                FIRST_WIN: { id: 'first_win', name: 'First Win', icon: '🏆', threshold: 1 },
+                COAT_MASTER: { id: 'coat_master', name: 'COAT Master', icon: '👑', threshold: 10 },
+                ACE_KING: { id: 'ace_king', name: 'Ace Catch King', icon: '♠️', threshold: 1 },
+                WIN_STREAK_5: { id: 'win_streak_5', name: 'Hot Streak', icon: '🔥', threshold: 5 },
+                WIN_STREAK_10: { id: 'win_streak_10', name: 'Unstoppable', icon: '⚡', threshold: 10 },
+                WIN_STREAK_25: { id: 'win_streak_25', name: 'Legendary', icon: '🌟', threshold: 25 }
+            };
 
             // Position rotation mappings - maps logical position to visual position based on viewer
             // Visual positions: south=bottom, west=left, north=top, east=right
@@ -1600,6 +1995,536 @@
             const joinStatus = document.getElementById('join-status');
             const startGameBtn = document.getElementById('start-game-btn');
 
+            // --- FIREBASE AUTHENTICATION FUNCTIONS ---
+
+            /**
+             * Load user profile from Firestore
+             */
+            async function loadUserProfile(user) {
+                if (!user || user.isAnonymous) return;
+
+                try {
+                    const userRef = db.collection('users').doc(user.uid);
+                    const doc = await userRef.get();
+
+                    if (!doc.exists) {
+                        // Create new user profile
+                        userProfile = {
+                            displayName: user.displayName || myName || 'Player',
+                            email: user.email,
+                            photoURL: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'Player')}&background=0a6c3a&color=fff`,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            lastPlayed: firebase.firestore.FieldValue.serverTimestamp(),
+                            stats: {
+                                gamesPlayed: 0,
+                                wins: 0,
+                                losses: 0,
+                                coats: 0
+                            },
+                            friendsList: []
+                        };
+                        await userRef.set(userProfile);
+                        console.log('Created new user profile');
+                    } else {
+                        userProfile = doc.data();
+                        // Update last played time
+                        await userRef.update({
+                            lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log('Loaded user profile:', userProfile);
+                    }
+                } catch (error) {
+                    console.error('Error loading user profile:', error);
+                }
+            }
+
+            /**
+             * Update UI for signed-in user
+             */
+            function updateUIForSignedInUser() {
+                if (!userProfile) return;
+
+                const userProfileEl = document.getElementById('user-profile');
+                const signInPromptEl = document.getElementById('sign-in-prompt');
+                const userAvatarEl = document.getElementById('user-avatar');
+                const userDisplayNameEl = document.getElementById('user-display-name');
+
+                if (userProfileEl && signInPromptEl) {
+                    userProfileEl.style.display = 'flex';
+                    signInPromptEl.style.display = 'none';
+
+                    if (userAvatarEl && userDisplayNameEl) {
+                        userAvatarEl.src = userProfile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.displayName)}&background=0a6c3a&color=fff`;
+                        userDisplayNameEl.textContent = userProfile.displayName || 'Player';
+                    }
+                }
+
+                // Pre-fill name input with user's display name
+                if (nameInput && userProfile.displayName) {
+                    nameInput.value = userProfile.displayName;
+                    myName = userProfile.displayName;
+                }
+            }
+
+            /**
+             * Update UI for guest user (not signed in or anonymous)
+             */
+            function updateUIForGuestUser() {
+                const userProfileEl = document.getElementById('user-profile');
+                const signInPromptEl = document.getElementById('sign-in-prompt');
+
+                if (userProfileEl && signInPromptEl) {
+                    userProfileEl.style.display = 'none';
+                    signInPromptEl.style.display = firebaseEnabled ? 'block' : 'none';
+                }
+            }
+
+            /**
+             * Sign in with Google
+             */
+            async function signInWithGoogle() {
+                if (!firebaseEnabled) {
+                    showAuthError('Firebase is not configured');
+                    return;
+                }
+
+                try {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    await auth.signInWithPopup(provider);
+                    hideModal();
+                } catch (error) {
+                    console.error('Google sign-in error:', error);
+                    showAuthError(error.message);
+                }
+            }
+
+            /**
+             * Sign in with Apple
+             */
+            async function signInWithApple() {
+                if (!firebaseEnabled) {
+                    showAuthError('Firebase is not configured');
+                    return;
+                }
+
+                try {
+                    const provider = new firebase.auth.OAuthProvider('apple.com');
+                    await auth.signInWithPopup(provider);
+                    hideModal();
+                } catch (error) {
+                    console.error('Apple sign-in error:', error);
+                    showAuthError(error.message);
+                }
+            }
+
+            /**
+             * Sign in with Email/Password
+             */
+            async function signInWithEmail(email, password) {
+                if (!firebaseEnabled) {
+                    showAuthError('Firebase is not configured');
+                    return;
+                }
+
+                try {
+                    await auth.signInWithEmailAndPassword(email, password);
+                    hideModal();
+                } catch (error) {
+                    console.error('Email sign-in error:', error);
+                    showAuthError(error.message);
+                }
+            }
+
+            /**
+             * Create account with Email/Password
+             */
+            async function signUpWithEmail(email, password) {
+                if (!firebaseEnabled) {
+                    showAuthError('Firebase is not configured');
+                    return;
+                }
+
+                try {
+                    const result = await auth.createUserWithEmailAndPassword(email, password);
+                    // Set display name from name input
+                    if (myName) {
+                        await result.user.updateProfile({
+                            displayName: myName
+                        });
+                    }
+                    hideModal();
+                } catch (error) {
+                    console.error('Email sign-up error:', error);
+                    showAuthError(error.message);
+                }
+            }
+
+            /**
+             * Sign out
+             */
+            async function signOut() {
+                if (!firebaseEnabled || !auth) return;
+
+                try {
+                    await auth.signOut();
+                    currentUser = null;
+                    userProfile = null;
+                    // Sign in anonymously for guest play
+                    await auth.signInAnonymously();
+                    updateUIForGuestUser();
+                    console.log('Signed out successfully');
+                } catch (error) {
+                    console.error('Sign out error:', error);
+                }
+            }
+
+            /**
+             * Show authentication error
+             */
+            function showAuthError(message) {
+                const authErrorEl = document.getElementById('auth-error');
+                if (authErrorEl) {
+                    authErrorEl.textContent = message;
+                    setTimeout(() => {
+                        authErrorEl.textContent = '';
+                    }, 5000);
+                }
+            }
+
+            /**
+             * Update game stats after match ends
+             */
+            async function updateGameStats(didWin, wasCoat = false) {
+                if (!firebaseEnabled || !currentUser || isAnonymous || !userProfile) return;
+
+                try {
+                    const userRef = db.collection('users').doc(currentUser.uid);
+
+                    const updates = {
+                        'stats.gamesPlayed': firebase.firestore.FieldValue.increment(1),
+                        lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    if (didWin) {
+                        updates['stats.wins'] = firebase.firestore.FieldValue.increment(1);
+                        if (wasCoat) {
+                            updates['stats.coats'] = firebase.firestore.FieldValue.increment(1);
+                        }
+                    } else {
+                        updates['stats.losses'] = firebase.firestore.FieldValue.increment(1);
+                    }
+
+                    await userRef.update(updates);
+
+                    // Update local profile
+                    userProfile.stats.gamesPlayed++;
+                    if (didWin) {
+                        userProfile.stats.wins++;
+                        if (wasCoat) {
+                            userProfile.stats.coats++;
+                        }
+                    } else {
+                        userProfile.stats.losses++;
+                    }
+
+                    console.log('Game stats updated');
+                } catch (error) {
+                    console.error('Error updating game stats:', error);
+                }
+            }
+
+            // --- STATS TRACKING FUNCTIONS ---
+
+            /**
+             * Initialize or load user stats from Firestore
+             */
+            async function initializeUserStats() {
+                if (!currentUser) return;
+
+                try {
+                    const userRef = db.collection('users').doc(currentUser.uid);
+                    const doc = await userRef.get();
+
+                    if (!doc.exists) {
+                        // Create new user stats
+                        userStats = {
+                            displayName: myName || 'Player',
+                            gamesPlayed: 0,
+                            wins: 0,
+                            losses: 0,
+                            coats: 0,
+                            aceKings: 0,
+                            currentStreak: 0,
+                            longestStreak: 0,
+                            trumpSelections: 0,
+                            trumpSuccessRate: 0,
+                            achievements: [],
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        await userRef.set(userStats);
+                    } else {
+                        userStats = doc.data();
+                    }
+                    console.log("User stats loaded:", userStats);
+                } catch (error) {
+                    console.error("Error loading user stats:", error);
+                }
+            }
+
+            /**
+             * Update stats after a game ends
+             */
+            async function updateStatsAfterGame(didWin, wasCoat, wasAceKing, myTeam) {
+                if (!currentUser || !userStats) return;
+
+                try {
+                    const userRef = db.collection('users').doc(currentUser.uid);
+
+                    // Calculate new stats
+                    const newStats = {
+                        gamesPlayed: firebase.firestore.FieldValue.increment(1),
+                        lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    if (didWin) {
+                        newStats.wins = firebase.firestore.FieldValue.increment(1);
+                        newStats.currentStreak = userStats.currentStreak + 1;
+                        if (userStats.currentStreak + 1 > userStats.longestStreak) {
+                            newStats.longestStreak = userStats.currentStreak + 1;
+                        }
+                    } else {
+                        newStats.losses = firebase.firestore.FieldValue.increment(1);
+                        newStats.currentStreak = 0;
+                    }
+
+                    if (wasCoat) {
+                        newStats.coats = firebase.firestore.FieldValue.increment(1);
+                    }
+
+                    if (wasAceKing) {
+                        newStats.aceKings = firebase.firestore.FieldValue.increment(1);
+                    }
+
+                    // Update display name if changed
+                    if (myName && myName !== userStats.displayName) {
+                        newStats.displayName = myName;
+                    }
+
+                    await userRef.update(newStats);
+
+                    // Update local stats
+                    userStats.gamesPlayed++;
+                    if (didWin) {
+                        userStats.wins++;
+                        userStats.currentStreak++;
+                        if (userStats.currentStreak > userStats.longestStreak) {
+                            userStats.longestStreak = userStats.currentStreak;
+                        }
+                    } else {
+                        userStats.losses++;
+                        userStats.currentStreak = 0;
+                    }
+                    if (wasCoat) userStats.coats++;
+                    if (wasAceKing) userStats.aceKings++;
+
+                    // Check for achievements
+                    await checkAchievements(didWin, wasCoat, wasAceKing);
+
+                    // Update leaderboard
+                    await updateLeaderboard();
+
+                    // Save game to history
+                    await saveGameHistory(didWin, wasCoat, wasAceKing, myTeam);
+
+                    console.log("Stats updated successfully");
+                } catch (error) {
+                    console.error("Error updating stats:", error);
+                }
+            }
+
+            /**
+             * Check and award achievements
+             */
+            async function checkAchievements(didWin, wasCoat, wasAceKing) {
+                if (!currentUser || !userStats) return;
+
+                const newAchievements = [];
+
+                // First Win
+                if (didWin && userStats.wins === 1 && !userStats.achievements.includes('first_win')) {
+                    newAchievements.push('first_win');
+                }
+
+                // COAT Master
+                if (userStats.coats >= 10 && !userStats.achievements.includes('coat_master')) {
+                    newAchievements.push('coat_master');
+                }
+
+                // Ace Catch King
+                if (wasAceKing && !userStats.achievements.includes('ace_king')) {
+                    newAchievements.push('ace_king');
+                }
+
+                // Win Streaks
+                if (userStats.currentStreak >= 25 && !userStats.achievements.includes('win_streak_25')) {
+                    newAchievements.push('win_streak_25');
+                } else if (userStats.currentStreak >= 10 && !userStats.achievements.includes('win_streak_10')) {
+                    newAchievements.push('win_streak_10');
+                } else if (userStats.currentStreak >= 5 && !userStats.achievements.includes('win_streak_5')) {
+                    newAchievements.push('win_streak_5');
+                }
+
+                // Save new achievements
+                if (newAchievements.length > 0) {
+                    try {
+                        const userRef = db.collection('users').doc(currentUser.uid);
+                        await userRef.update({
+                            achievements: firebase.firestore.FieldValue.arrayUnion(...newAchievements)
+                        });
+                        userStats.achievements = [...userStats.achievements, ...newAchievements];
+
+                        // Show achievement notification
+                        newAchievements.forEach(achId => {
+                            const achievement = Object.values(ACHIEVEMENTS).find(a => a.id === achId);
+                            if (achievement) {
+                                showAchievementNotification(achievement);
+                            }
+                        });
+                    } catch (error) {
+                        console.error("Error saving achievements:", error);
+                    }
+                }
+            }
+
+            /**
+             * Show achievement notification
+             */
+            function showAchievementNotification(achievement) {
+                setTimeout(() => {
+                    showSpecialEventMessage(`${achievement.icon} Achievement Unlocked!\n${achievement.name}`, 2500);
+                }, 1000);
+            }
+
+            /**
+             * Update leaderboard with current user's stats
+             */
+            async function updateLeaderboard() {
+                if (!currentUser || !userStats) return;
+
+                try {
+                    const leaderboardRef = db.collection('leaderboard').doc(currentUser.uid);
+                    await leaderboardRef.set({
+                        displayName: userStats.displayName || myName || 'Player',
+                        wins: userStats.wins,
+                        gamesPlayed: userStats.gamesPlayed,
+                        winRate: userStats.gamesPlayed > 0 ? (userStats.wins / userStats.gamesPlayed * 100).toFixed(1) : 0,
+                        coats: userStats.coats,
+                        longestStreak: userStats.longestStreak,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error("Error updating leaderboard:", error);
+                }
+            }
+
+            /**
+             * Save game to history
+             */
+            async function saveGameHistory(didWin, wasCoat, wasAceKing, myTeam) {
+                if (!currentUser) return;
+
+                try {
+                    const historyRef = db.collection('users').doc(currentUser.uid)
+                        .collection('gameHistory');
+
+                    // Get opponent names (in multiplayer)
+                    let opponents = [];
+                    if (isMultiplayer) {
+                        POSITIONS.forEach(pos => {
+                            if (lobbyPlayers[pos] && players[pos].team !== myTeam) {
+                                opponents.push(lobbyPlayers[pos].name || capitalize(pos));
+                            }
+                        });
+                    } else {
+                        opponents = ['AI'];
+                    }
+
+                    await historyRef.add({
+                        result: didWin ? 'win' : 'loss',
+                        score: `${matchScores.teamRed}-${matchScores.teamBlue}`,
+                        myTeam: myTeam,
+                        opponent: opponents.join(', '),
+                        wasCoat: wasCoat || false,
+                        wasAceKing: wasAceKing || false,
+                        date: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    // Keep only last 50 games
+                    const snapshot = await historyRef.orderBy('date', 'desc').limit(51).get();
+                    if (snapshot.size > 50) {
+                        const oldestDoc = snapshot.docs[50];
+                        await oldestDoc.ref.delete();
+                    }
+                } catch (error) {
+                    console.error("Error saving game history:", error);
+                }
+            }
+
+            /**
+             * Get leaderboard data
+             */
+            async function getLeaderboard(limit = 100) {
+                try {
+                    const snapshot = await db.collection('leaderboard')
+                        .orderBy('wins', 'desc')
+                        .limit(limit)
+                        .get();
+
+                    const leaderboard = [];
+                    snapshot.forEach((doc, index) => {
+                        leaderboard.push({
+                            rank: index + 1,
+                            ...doc.data(),
+                            isCurrentUser: doc.id === currentUser?.uid
+                        });
+                    });
+
+                    return leaderboard;
+                } catch (error) {
+                    console.error("Error fetching leaderboard:", error);
+                    return [];
+                }
+            }
+
+            /**
+             * Get game history
+             */
+            async function getGameHistory(limit = 50) {
+                if (!currentUser) return [];
+
+                try {
+                    const snapshot = await db.collection('users').doc(currentUser.uid)
+                        .collection('gameHistory')
+                        .orderBy('date', 'desc')
+                        .limit(limit)
+                        .get();
+
+                    const history = [];
+                    snapshot.forEach(doc => {
+                        history.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+
+                    return history;
+                } catch (error) {
+                    console.error("Error fetching game history:", error);
+                    return [];
+                }
+            }
+
             // --- GAME STATE ---
             let deck = [];
             let players = {};
@@ -1611,6 +2536,10 @@
             let currentPlayer = 'south';
             let gameHandCounts = { teamRed: 0, teamBlue: 0 }; // Tracks hands won in current game (first to 7 hands wins game)
             let gameState = 'INIT'; // INIT, DEALING, TRUMP_SELECTION, PLAYING, HAND_OVER, GAME_OVER, MATCH_OVER
+
+            // Track game outcome for stats
+            let gameStartTeam = null;
+            let wasAceKingTriggered = false;
 
             // --- ADVANCED AI TRACKING ---
             let playerVoids = {}; // Tracks which suits each player is void in { player: Set(suits) }
@@ -1656,7 +2585,8 @@
                 currentPlayer = trumpCaller; // The caller is the current player
                 trumpSuit = null; // Reset trump for the new game
                 handLeader = null; // Will be set by setTrump
-                
+                wasAceKingTriggered = false; // Reset ace king flag
+
                 // Hide all modals explicitly
                 hideModal();
                 mainMenuModal.style.display = 'none';
@@ -2429,6 +3359,9 @@
                         const winnerTeam = aceTeam;
                         console.log(`!!! ACE CATCH KING by ${winner} !!!`);
 
+                        // Set flag for stats tracking
+                        wasAceKingTriggered = true;
+
                         // --- NEW ---
                         const winnerName = (winnerTeam === 'teamRed') ? "Team Red" : "Team Blue";
                         showSpecialEventMessage(`ACE CATCH KING!\n${winnerName} wins!`);
@@ -2614,6 +3547,17 @@
 
                 const winnerName = (winningTeam === 'teamRed') ? "Team Red" : "Team Blue";
                 const winnerColor = (winningTeam === 'teamRed') ? "var(--team-red)" : "var(--team-blue)";
+
+                // Update stats if user is signed in
+                const myTeam = players[myPosition].team;
+                const didWin = winningTeam === myTeam;
+                const wasCoat = message.includes('COAT') || message.includes('7-0');
+                const wasAceKing = wasAceKingTriggered || message.includes('Ace Catch King');
+
+                // Save stats to Firebase
+                updateStatsAfterGame(didWin, wasCoat, wasAceKing, myTeam).catch(err => {
+                    console.error('Failed to save stats:', err);
+                });
 
                 // Show win animation
                 specialEventMessage.style.color = winnerColor;
@@ -3889,6 +4833,99 @@
 
             // --- MENU EVENT LISTENERS ---
 
+            // --- AUTHENTICATION EVENT LISTENERS ---
+
+            // Show auth modal button
+            const showAuthBtn = document.getElementById('show-auth-btn');
+            if (showAuthBtn) {
+                showAuthBtn.addEventListener('click', () => {
+                    document.getElementById('auth-modal').style.display = 'block';
+                    mainMenuModal.style.display = 'none';
+                    showModal();
+                });
+            }
+
+            // Auth back button
+            const authBackBtn = document.getElementById('auth-back-btn');
+            if (authBackBtn) {
+                authBackBtn.addEventListener('click', () => {
+                    document.getElementById('auth-modal').style.display = 'none';
+                    showMainMenu();
+                });
+            }
+
+            // Sign out button
+            const signOutBtn = document.getElementById('sign-out-btn');
+            if (signOutBtn) {
+                signOutBtn.addEventListener('click', () => {
+                    signOut();
+                });
+            }
+
+            // Google sign-in button
+            const googleSignInBtn = document.getElementById('google-sign-in-btn');
+            if (googleSignInBtn) {
+                googleSignInBtn.addEventListener('click', () => {
+                    signInWithGoogle();
+                });
+            }
+
+            // Apple sign-in button
+            const appleSignInBtn = document.getElementById('apple-sign-in-btn');
+            if (appleSignInBtn) {
+                appleSignInBtn.addEventListener('click', () => {
+                    signInWithApple();
+                });
+            }
+
+            // Email auth toggle button
+            const emailAuthToggleBtn = document.getElementById('email-auth-toggle-btn');
+            const emailAuthForm = document.getElementById('email-auth-form');
+            if (emailAuthToggleBtn && emailAuthForm) {
+                emailAuthToggleBtn.addEventListener('click', () => {
+                    const isVisible = emailAuthForm.style.display === 'block';
+                    emailAuthForm.style.display = isVisible ? 'none' : 'block';
+                    emailAuthToggleBtn.textContent = isVisible ? 'Sign in with Email' : 'Hide Email Form';
+                });
+            }
+
+            // Email sign-in button
+            const emailSignInBtn = document.getElementById('email-sign-in-btn');
+            if (emailSignInBtn) {
+                emailSignInBtn.addEventListener('click', () => {
+                    const email = document.getElementById('email-input').value.trim();
+                    const password = document.getElementById('password-input').value;
+
+                    if (!email || !password) {
+                        showAuthError('Please enter email and password');
+                        return;
+                    }
+
+                    signInWithEmail(email, password);
+                });
+            }
+
+            // Email sign-up button
+            const emailSignUpBtn = document.getElementById('email-sign-up-btn');
+            if (emailSignUpBtn) {
+                emailSignUpBtn.addEventListener('click', () => {
+                    const email = document.getElementById('email-input').value.trim();
+                    const password = document.getElementById('password-input').value;
+
+                    if (!email || !password) {
+                        showAuthError('Please enter email and password');
+                        return;
+                    }
+
+                    if (password.length < 6) {
+                        showAuthError('Password must be at least 6 characters');
+                        return;
+                    }
+
+                    signUpWithEmail(email, password);
+                });
+            }
+
             // Play vs AI button
             document.getElementById('play-ai-btn').addEventListener('click', () => {
                 myName = nameInput.value.trim() || 'Player';
@@ -4178,6 +5215,167 @@
                 hideModal();
                 updateStatusMessage('Joining game...');
             }
+
+            // --- STATS AND LEADERBOARD UI FUNCTIONS ---
+
+            /**
+             * Show player stats modal
+             */
+            async function showStatsModal() {
+                document.getElementById('stats-modal').style.display = 'block';
+                trumpModal.style.display = 'none';
+                gameOverModal.style.display = 'none';
+                document.getElementById('help-modal').style.display = 'none';
+                document.getElementById('share-modal').style.display = 'none';
+                document.getElementById('game-menu-modal').style.display = 'none';
+                document.getElementById('leaderboard-modal').style.display = 'none';
+                showModal();
+
+                document.getElementById('stats-loading').style.display = 'block';
+                document.getElementById('stats-content').style.display = 'none';
+
+                // Ensure stats are loaded
+                if (!userStats) {
+                    await initializeUserStats();
+                }
+
+                if (userStats) {
+                    // Update stats display
+                    const winRate = userStats.gamesPlayed > 0
+                        ? ((userStats.wins / userStats.gamesPlayed) * 100).toFixed(1)
+                        : 0;
+
+                    document.getElementById('stat-games').textContent = userStats.gamesPlayed || 0;
+                    document.getElementById('stat-wins').textContent = userStats.wins || 0;
+                    document.getElementById('stat-losses').textContent = userStats.losses || 0;
+                    document.getElementById('stat-win-rate').textContent = winRate + '%';
+                    document.getElementById('stat-coats').textContent = userStats.coats || 0;
+                    document.getElementById('stat-ace-kings').textContent = userStats.aceKings || 0;
+                    document.getElementById('stat-current-streak').textContent = userStats.currentStreak || 0;
+                    document.getElementById('stat-longest-streak').textContent = userStats.longestStreak || 0;
+
+                    // Display achievements
+                    const achievementsList = document.getElementById('achievements-list');
+                    achievementsList.innerHTML = '';
+
+                    if (!userStats.achievements || userStats.achievements.length === 0) {
+                        achievementsList.innerHTML = '<div style="color: #999; font-style: italic; width: 100%;">No achievements yet. Keep playing!</div>';
+                    } else {
+                        Object.values(ACHIEVEMENTS).forEach(achievement => {
+                            if (userStats.achievements.includes(achievement.id)) {
+                                const achEl = document.createElement('div');
+                                achEl.style.cssText = 'background: #fff; padding: 8px 12px; border-radius: 6px; border: 2px solid var(--table-green-dark); text-align: center; min-width: 100px;';
+                                achEl.innerHTML = `<div style="font-size: 1.5rem;">${achievement.icon}</div><div style="font-size: 0.75rem; font-weight: 700;">${achievement.name}</div>`;
+                                achievementsList.appendChild(achEl);
+                            }
+                        });
+                    }
+
+                    // Load and display game history
+                    const history = await getGameHistory(10);
+                    const recentGamesEl = document.getElementById('recent-games');
+                    recentGamesEl.innerHTML = '';
+
+                    if (history.length === 0) {
+                        recentGamesEl.innerHTML = '<div style="color: #999; font-style: italic; text-align: center; padding: 10px;">No games played yet</div>';
+                    } else {
+                        history.forEach(game => {
+                            const gameEl = document.createElement('div');
+                            gameEl.style.cssText = 'padding: 8px; margin-bottom: 5px; background: #fff; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;';
+
+                            const resultIcon = game.result === 'win' ? '✅' : '❌';
+                            const resultText = game.result === 'win' ? 'Win' : 'Loss';
+                            const specialBadge = game.wasCoat ? ' 👑 COAT' : game.wasAceKing ? ' ♠️ ACK' : '';
+
+                            const dateStr = game.date ? new Date(game.date.toDate()).toLocaleDateString() : 'Recent';
+
+                            gameEl.innerHTML = `
+                                <div style="font-size: 0.85rem;">
+                                    <strong>${resultIcon} ${resultText}</strong> vs ${game.opponent}${specialBadge}
+                                </div>
+                                <div style="font-size: 0.75rem; color: #666;">${game.score} | ${dateStr}</div>
+                            `;
+                            recentGamesEl.appendChild(gameEl);
+                        });
+                    }
+
+                    document.getElementById('stats-loading').style.display = 'none';
+                    document.getElementById('stats-content').style.display = 'block';
+                } else {
+                    document.getElementById('stats-loading').innerHTML = 'Failed to load stats. Please try again.';
+                }
+            }
+
+            /**
+             * Show leaderboard modal
+             */
+            async function showLeaderboardModal() {
+                document.getElementById('leaderboard-modal').style.display = 'block';
+                trumpModal.style.display = 'none';
+                gameOverModal.style.display = 'none';
+                document.getElementById('help-modal').style.display = 'none';
+                document.getElementById('share-modal').style.display = 'none';
+                document.getElementById('game-menu-modal').style.display = 'none';
+                document.getElementById('stats-modal').style.display = 'none';
+                showModal();
+
+                document.getElementById('leaderboard-loading').style.display = 'block';
+                document.getElementById('leaderboard-content').style.display = 'none';
+
+                // Load leaderboard data
+                const leaderboard = await getLeaderboard(100);
+                const leaderboardList = document.getElementById('leaderboard-list');
+                leaderboardList.innerHTML = '';
+
+                if (leaderboard.length === 0) {
+                    leaderboardList.innerHTML = '<div style="color: #999; font-style: italic; text-align: center; padding: 20px;">No players yet. Be the first!</div>';
+                } else {
+                    leaderboard.forEach(entry => {
+                        const entryEl = document.createElement('div');
+                        const isCurrentUser = entry.isCurrentUser;
+                        const bgColor = isCurrentUser ? '#e8f5e9' : '#f9f9f9';
+                        const fontWeight = isCurrentUser ? '700' : '400';
+
+                        // Medal for top 3
+                        let rankDisplay = entry.rank;
+                        if (entry.rank === 1) rankDisplay = '🥇';
+                        else if (entry.rank === 2) rankDisplay = '🥈';
+                        else if (entry.rank === 3) rankDisplay = '🥉';
+
+                        entryEl.style.cssText = `display: grid; grid-template-columns: 50px 1fr 80px 80px 80px; gap: 10px; padding: 10px; background: ${bgColor}; border-radius: 6px; margin-bottom: 5px; font-size: 0.85rem; font-weight: ${fontWeight};`;
+
+                        entryEl.innerHTML = `
+                            <div style="text-align: center;">${rankDisplay}</div>
+                            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${entry.displayName}${isCurrentUser ? ' (You)' : ''}</div>
+                            <div style="text-align: center;">${entry.wins}</div>
+                            <div style="text-align: center;">${entry.gamesPlayed}</div>
+                            <div style="text-align: center;">${entry.winRate}%</div>
+                        `;
+
+                        leaderboardList.appendChild(entryEl);
+                    });
+                }
+
+                document.getElementById('leaderboard-loading').style.display = 'none';
+                document.getElementById('leaderboard-content').style.display = 'block';
+            }
+
+            // Stats and Leaderboard button listeners
+            document.getElementById('view-stats-btn').addEventListener('click', () => {
+                showStatsModal();
+            });
+
+            document.getElementById('view-leaderboard-btn').addEventListener('click', () => {
+                showLeaderboardModal();
+            });
+
+            document.getElementById('close-stats-btn').addEventListener('click', () => {
+                hideModal();
+            });
+
+            document.getElementById('close-leaderboard-btn').addEventListener('click', () => {
+                hideModal();
+            });
 
             // Team selection button listeners
             document.getElementById('join-team-red-btn').addEventListener('click', () => {
