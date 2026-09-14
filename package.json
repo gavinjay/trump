@@ -1,0 +1,32 @@
+{
+  "name": "trump-card-game",
+  "version": "1.0.0",
+  "description": "Trump (Court Piece) Card Game - Native Mobile App",
+  "author": "Trump Card Game Team",
+  "license": "MIT",
+  "scripts": {
+    "ios": "cap open ios",
+    "android": "cap open android",
+    "sync": "cap sync",
+    "sync:ios": "cap sync ios",
+    "sync:android": "cap sync android",
+    "build:ios": "cap build ios",
+    "build:android": "cap build android",
+    "add:ios": "cap add ios",
+    "add:android": "cap add android",
+    "update": "cap update"
+  },
+  "dependencies": {
+    "@capacitor/core": "^5.7.0",
+    "@capacitor/ios": "^5.7.0",
+    "@capacitor/android": "^5.7.0",
+    "@capacitor/splash-screen": "^5.0.7",
+    "@capacitor/status-bar": "^5.0.7",
+    "@capacitor/app": "^5.0.7",
+    "@capacitor/keyboard": "^5.0.8",
+    "@capacitor/haptics": "^5.0.7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^5.7.0"
+  }
+}
