@@ -2569,6 +2569,77 @@ body{
         #player-west-area .ai-hand.revealing .card,
         #player-east-area .ai-hand.revealing .card { top: calc(var(--i) * var(--fan-step)); }
 
+
+        /* --- Trump selection must not obscure the hand ----------------------
+           Trump is chosen from the five cards you have been dealt, so those
+           cards have to be readable while the dialog is open. The old rule only
+           lightened the scrim to 0.4, and the visual system later added
+           backdrop-filter: blur(3px) to the overlay, which put the hand behind a
+           dark blurred pane — the ranks were genuinely unreadable on a phone.
+
+           backdrop-filter only affects what is painted BEHIND the element, so
+           raising the hand above the overlay removes both the blur and the dim
+           in one move, rather than fighting them with opacity. */
+        #modal-overlay.trump-select ~ #game-container #player-hand-south,
+        body:has(#modal-overlay.trump-select.visible) #player-hand-south {
+            z-index: 260;                 /* overlay is 200 */
+        }
+
+        /* Fallback for engines without :has() — the JS also sets this class. */
+        #player-hand-south.above-modal {
+            z-index: 260;
+        }
+
+        /* Make it read as "judge these five", and give the strip its own ground
+           so the cards are not floating on a dimmed table. */
+        #player-hand-south.above-modal::before {
+            content: '';
+            position: absolute;
+            inset: -14px -8px -10px -8px;
+            border-radius: 18px;
+            background: radial-gradient(120% 140% at 50% 100%,
+                        rgba(10, 60, 36, .96) 0%, rgba(6, 40, 24, .90) 60%, rgba(4, 26, 16, .72) 100%);
+            box-shadow: 0 -8px 26px rgba(0, 0, 0, .45),
+                        inset 0 1px 0 rgba(230, 200, 119, .28);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Keep the dialog clear of the hand at every height. */
+        #modal-overlay.trump-select .modal-content {
+            margin-top: 8vh;
+            margin-bottom: auto;
+        }
+
+
+        /* --- Short viewports (landscape phone) ------------------------------
+           Every card-size breakpoint in this file is keyed on WIDTH, but a phone
+           in landscape is 844 wide and only 390 tall: it passes the width tests,
+           takes the desktop 60x90 cards, and the hand is then clipped by the
+           bottom of the screen. Key the small card set off height as well.
+           Values mirror the max-width:480px set so the fan math stays coherent. */
+        @media (max-height: 500px) {
+            .card, .card-back {
+                width: 45px;
+                height: 68px;
+                font-size: 0.85rem;
+            }
+            #player-hand-south .card { margin-left: -22px; }
+            /* The fan rotates each card +/-5deg, which expands a 45x68 card's
+               axis-aligned box to about 51x72. Sitting at bottom:5px that pushed
+               the lowest corners ~7px past the bottom of a 390px-tall viewport,
+               so the hand is lifted enough to clear the rotation. */
+            #player-hand-south { height: 78px; bottom: 16px; }
+            #player-south-area { bottom: 100px; }
+            .card .card-suit::before { font-size: 1.24rem; }
+            .card-rank { font-size: 0.86rem; }
+            /* Opponent fans get proportionally tighter too. */
+            #player-north-area .ai-hand { height: 68px; }
+            #player-west-area .ai-hand,
+            #player-east-area .ai-hand { width: 45px; }
+            #modal-overlay.trump-select .modal-content { margin-top: 4vh; }
+        }
+
     </style>
 </head>
 <body>
@@ -4018,6 +4089,9 @@ body{
                     trumpModal.style.display = 'block';
                     showModal();
                     modalOverlay.classList.add('trump-select'); // NEW: Special class
+                    // Lift the hand above the overlay so the five cards trump is
+                    // being chosen from stay readable (the overlay dims AND blurs).
+                    playerHands.south.classList.add('above-modal');
                 } else if (players[currentPlayer].isAI) {
                     // AI selects trump
                     gameTimeout(() => {
@@ -4066,6 +4140,7 @@ body{
 
                 hideModal();
                 modalOverlay.classList.remove('trump-select'); // NEW: Clean up
+                playerHands.south.classList.remove('above-modal');
                 updateTrumpDisplay();
                 updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. Dealing remaining cards...`);
 
@@ -4663,6 +4738,7 @@ body{
                     trumpModal.style.display = 'none';
                     gameOverModal.style.display = 'block';
                     modalOverlay.classList.remove('trump-select');
+                    playerHands.south.classList.remove('above-modal');
                     showModal();
 
                     // Reset color for next time
@@ -5062,6 +5138,7 @@ body{
             function hideModal() {
                 modalOverlay.classList.remove('visible');
                 modalOverlay.classList.remove('trump-select'); // NEW: Clean up just in case
+                playerHands.south.classList.remove('above-modal');
                 if (lastFocusedBeforeModal && document.contains(lastFocusedBeforeModal)) {
                     lastFocusedBeforeModal.focus();
                 }
