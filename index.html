@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Trump (Court Piece)</title>
 
     <!-- Mobile App Meta Tags -->
@@ -27,9 +27,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- PeerJS for multiplayer -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- Firebase for server-based multiplayer -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-database-compat.js"></script>
     <!-- Twemoji for consistent emoji rendering -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" integrity="sha512-/PCHE/GeV8rkUkLCnYFPJRYxD/b0p5lWDE1F3qxw2LvKxUxNW7L8W6JZvz/4f4RDYvqNjPYgxQPYzwLxNRCiGw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- Firebase SDK -->
@@ -73,6 +70,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            min-height: 100dvh; /* dvh excludes iOS browser chrome; vh does not */
             min-height: -webkit-fill-available;
             overflow: hidden;
             -webkit-font-smoothing: antialiased;
@@ -85,6 +83,7 @@
             width: 100%;
             max-width: 900px;
             height: 100vh;
+            height: 100dvh;
             max-height: 700px;
             background-color: var(--table-green);
             border: 10px solid var(--table-green-dark);
@@ -808,6 +807,7 @@
             #game-container {
                 max-height: none;
                 height: 100vh;
+                height: 100dvh;
                 border-radius: 0;
                 border: none;
             }
@@ -1375,6 +1375,1144 @@
             text-transform: uppercase;
         }
 
+
+        /* ============================================================
+           "THE HIGH-LIMIT ROOM" — visual system.
+           Appended last so it supersedes the original rules above by
+           cascade order. One light source (upper-left) is obeyed by every
+           bevel, inset highlight and drop shadow, so the table reads as a
+           photographed object rather than a stack of divs.
+           Card box sizes are deliberately unchanged: renderAllHands()
+           hard-codes 65px/35px fan slots and a -30px margin against a
+           60px card, so changing card width desyncs the fan.
+           ============================================================ */
+/* ============================================================
+   PALETTE — replaces the :root block at line 41.
+   Legacy var names are kept as aliases so untouched rules
+   (#game-code, .copy-btn, .auth-btn-*, etc.) keep working.
+   ============================================================ */
+:root{
+  /* --- Felt: deep emerald wool, lit from upper-left --- */
+  --felt-key:      #1d8a59;
+  --felt:          #0c5a37;
+  --felt-shade:    #063c22;
+  --felt-deep:     #03190f;
+
+  /* --- Rail: walnut with brass inlay --- */
+  --rail-hi:       #55392a;
+  --rail:          #33211a;
+  --rail-lo:       #170d09;
+
+  /* --- Brass (the only metal in the system) --- */
+  --brass-100:     #fdf6dd;
+  --brass-200:     #f4e3ac;
+  --brass-300:     #e6c877;
+  --brass-400:     #cfa746;
+  --brass-500:     #ab8128;
+  --brass-600:     #7e5c17;
+  --brass-700:     #553d0f;
+
+  /* --- Card stock + ink --- */
+  --stock-100:     #fffdf8;
+  --stock:         #f7f2e7;
+  --stock-200:     #ece4d3;
+  --stock-edge:    #d5c9b0;
+  --ink:           #171a1f;
+  --ink-soft:      #4c5560;
+
+  /* --- Four-colour deck. Shape carries suit; colour reinforces.
+         All four clear 5:1 on --stock, and no two share a hue
+         family, so red/green CVD still separates by luminance. --- */
+  --suit-spade:    #15191f;   /* near-black  */
+  --suit-heart:    #b3122a;   /* deep red    */
+  --suit-diamond:  #0f5aa8;   /* sapphire    */
+  --suit-club:     #056b4e;   /* pine/teal   */
+
+  /* --- Light + depth --- */
+  --edge-light:    rgba(255,252,244,.95);
+  --contact:       rgba(6,14,9,.32);
+  --focus:         #ffd782;
+  --card-radius:   7px;
+
+  /* --- Teams. Two sets: bright for dark felt, ink for light modals --- */
+  --team-red:      #ef6f57;
+  --team-blue:     #6aa6ee;
+  --team-red-ink:  #b4321c;
+  --team-blue-ink: #1e5fb0;
+
+  /* --- Legacy aliases (do not delete: older rules reference these) --- */
+  --table-green:      var(--felt);
+  --table-green-dark: #0a4429;
+  --card-bg:          var(--stock);
+  --card-border:      var(--stock-edge);
+  --text-light:       #f3ece0;
+  --text-dark:        var(--ink);
+  --suit-red:         var(--suit-heart);
+  --suit-black:       var(--suit-spade);
+  --highlight-player: var(--brass-300);
+  --highlight-card:   #ffe3a3;
+
+  /* --- Elevation ladder, all lit from the same direction --- */
+  --lift-rest:
+    inset 0 1px 0 var(--edge-light),
+    inset 0 -1px 0 rgba(120,96,58,.30),
+    inset -1px 0 0 rgba(120,96,58,.12),
+    0 1px 1px var(--contact),
+    0 3px 6px -1px rgba(6,14,9,.30),
+    0 10px 18px -8px rgba(0,0,0,.45);
+  --lift-raised:
+    inset 0 1px 0 var(--edge-light),
+    inset 0 -1px 0 rgba(120,96,58,.30),
+    0 2px 3px rgba(6,14,9,.34),
+    0 10px 20px -6px rgba(0,0,0,.52),
+    0 22px 34px -18px rgba(0,0,0,.6);
+}
+
+/* Body ground: the room around the table, not a flat grey */
+body{
+  background:
+    radial-gradient(120% 90% at 50% 0%, #2a2119 0%, #14100c 55%, #070605 100%);
+  color: var(--text-light);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* ============================================================
+   CARDS — paste AFTER the existing card rules so the per-suit
+   colour rules at lines 306-307 are superseded.
+
+   Sizes are deliberately UNCHANGED (60x90 / 50x75 / 45x68):
+   renderAllHands() hard-codes 65px/35px fan slots and a
+   -30px/-22px margin-left. Changing width desyncs the fan.
+   ============================================================ */
+
+.card, .card-back{
+  width:60px; height:90px;
+  border-radius: var(--card-radius);
+  box-sizing:border-box;
+  position:relative;
+  padding:0;
+  user-select:none; -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  /* Explicit list, not `all` — `all` makes every repaint a tween */
+  transition:
+    translate .18s cubic-bezier(.2,.75,.3,1),
+    scale     .18s cubic-bezier(.2,.75,.3,1),
+    box-shadow .18s ease,
+    filter     .18s ease;
+}
+
+/* ---------- Face: ivory stock, lit top bevel, dark bottom edge ---------- */
+.card{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(255,255,255,0) 42%),
+    radial-gradient(125% 95% at 18% 6%, #fffefb 0%, var(--stock) 55%, var(--stock-200) 100%);
+  background-clip: padding-box;
+  border:1px solid var(--stock-edge);
+  color: var(--ink);
+  font-family:'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-weight:800;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing:-.02em;
+  box-shadow: var(--lift-rest);
+}
+
+/* Paper tooth. Two 3px cross-hatches at 4-5% alpha — painted once
+   per card, no runtime cost, but stops the face reading as plastic. */
+.card::before{
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  pointer-events:none; opacity:.7;
+  background:
+    repeating-linear-gradient( 45deg, rgba(120,96,58,.05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, rgba(120,96,58,.04) 0 1px, transparent 1px 3px);
+}
+
+/* ---------- Four-colour deck ----------
+   --pip drives BOTH the corner index and the centre pip, so suit
+   lives in exactly one declaration. \FE0E is the text-presentation
+   variation selector: without it iOS renders these as colour emoji. */
+.card.suit-S{ --pip:"\2660\FE0E"; --suit:var(--suit-spade);   color:var(--suit-spade);   }
+.card.suit-H{ --pip:"\2665\FE0E"; --suit:var(--suit-heart);   color:var(--suit-heart);   }
+.card.suit-D{ --pip:"\2666\FE0E"; --suit:var(--suit-diamond); color:var(--suit-diamond); }
+.card.suit-C{ --pip:"\2663\FE0E"; --suit:var(--suit-club);    color:var(--suit-club);    }
+
+/* ---------- Corner index: the ONLY thing visible on a fanned hand ----------
+   At 13 cards the fan exposes ~26px of each card, so rank+pip must
+   live in the top-left 20px. Stacked index, dead centre of that strip. */
+.card-rank{
+  position:absolute;
+  top:3px; left:4px;
+  z-index:2;
+  min-width:.74em;
+  text-align:center;
+  font-size:1.02rem;
+  font-weight:800;
+  line-height:.9;
+  text-shadow:0 1px 0 rgba(255,255,255,.85);
+}
+.card-rank::after{
+  content: var(--pip);
+  display:block;
+  margin-top:1px;
+  font-size:.66em;
+  font-weight:400;
+  line-height:1;
+  letter-spacing:0;
+  text-shadow:none;
+}
+.card-rank-bottom{
+  top:auto; left:auto;
+  bottom:3px; right:4px;
+  transform:rotate(180deg);
+}
+
+/* ---------- Centre pip: kill Twemoji, draw it ourselves ----------
+   Twemoji <img> pips can't be recoloured (no four-colour deck),
+   and they're a CDN round-trip per card. Both go away here. */
+.card .card-suit{
+  position:relative; z-index:1;
+  align-self:center;
+  font-size:0; line-height:0; color:transparent;   /* hides raw-emoji fallback */
+}
+.card .card-suit > img.emoji{ display:none !important; }
+.card .card-suit::before{
+  content: var(--pip);
+  display:block;
+  font-size:1.72rem;
+  line-height:1;
+  color: var(--suit);
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.7),
+    0 -.5px 0 rgba(0,0,0,.10);
+}
+
+/* ---------- Back: oxblood lacquer, brass inlay, milled medallion ---------- */
+.card-back{
+  background:
+    radial-gradient(58% 44% at 50% 42%, rgba(244,227,172,.26) 0%, rgba(244,227,172,0) 70%),
+    repeating-linear-gradient( 45deg, rgba(244,227,172,.15) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(-45deg, rgba(244,227,172,.15) 0 1px, transparent 1px 6px),
+    linear-gradient(160deg, #6e1526 0%, #4b0d1b 52%, #350a14 100%);
+  border:1px solid rgba(0,0,0,.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(230,200,119,.55),
+    inset 0 0 0 3px rgba(0,0,0,.30),
+    inset 0 1px 0 rgba(255,255,255,.14),
+    0 1px 1px rgba(6,14,9,.32),
+    0 4px 9px -3px rgba(0,0,0,.45);
+}
+.card-back::after{
+  content:''; position:absolute; inset:0; margin:auto;
+  width:34%; aspect-ratio:1; max-width:100%;
+  border-radius:50%;
+  background: radial-gradient(circle at 34% 28%, var(--brass-200), var(--brass-400) 55%, var(--brass-600) 100%);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.38),
+    0 1px 2px rgba(0,0,0,.35),
+    inset 0 1px 0 rgba(255,255,255,.5);
+  opacity:.92;
+}
+
+/* ---------- South hand: lift uses `translate`/`scale`, never `transform` ----------
+   createCardElement() writes an inline transform for the fan.
+   Inline beats stylesheet, which is why the current :hover does
+   nothing. The individual properties compose with it instead. */
+#player-hand-south .card{
+  position:absolute;
+  bottom:0; left:50%;
+  margin-left:-30px;
+  cursor:pointer;
+}
+#player-hand-south .card:hover,
+#player-hand-south .card:focus-visible{
+  translate:0 -16px;
+  scale:1.04;
+  box-shadow: var(--lift-raised);
+  z-index:150 !important;      /* JS writes an inline z-index per card */
+}
+#player-hand-south .card:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+
+/* Playable: brass rim as a SHADOW, not a border.
+   The old `border: 2px solid` changed the box and nudged the fan. */
+#player-hand-south .card.playable{
+  translate:0 -6px;
+  box-shadow:
+    inset 0 1px 0 var(--edge-light),
+    inset 0 -1px 0 rgba(120,96,58,.30),
+    0 0 0 1.5px var(--brass-300),
+    0 2px 3px rgba(6,14,9,.32),
+    0 9px 18px -6px rgba(0,0,0,.5),
+    0 0 18px -2px rgba(226,186,92,.42);
+  border-color: var(--brass-400);
+}
+#player-hand-south .card.playable:hover{ translate:0 -20px; scale:1.07; }
+#player-hand-south .card.playable:active{ translate:0 -9px;  scale:1.02; transition-duration:.08s; }
+
+/* Not playable: flat on the felt, out of the light */
+#player-hand-south .card.disabled{
+  translate:0 0; scale:1;
+  filter: saturate(.18) brightness(.70) contrast(.96);
+  cursor:not-allowed;
+  box-shadow:
+    0 1px 1px rgba(6,14,9,.38),
+    0 2px 4px -1px rgba(0,0,0,.32);
+}
+#player-hand-south .card.disabled:hover{ translate:0 0; scale:1; box-shadow:
+    0 1px 1px rgba(6,14,9,.38), 0 2px 4px -1px rgba(0,0,0,.32); }
+
+/* ---------- Legibility ladder. Do not shrink these further. ---------- */
+@media (max-width:700px){
+  .card, .card-back{ width:50px; height:75px; border-radius:6px; }
+  .card-rank{ font-size:.88rem; top:2px; left:3px; }
+  .card-rank-bottom{ bottom:2px; right:3px; }
+  .card .card-suit::before{ font-size:1.45rem; }
+}
+@media (max-width:480px){
+  .card, .card-back{ width:45px; height:68px; border-radius:5px; }
+  #player-hand-south .card{ margin-left:-22px; }
+  /* 12.5px bold in a ~20px exposed strip: "10" measures ~15px. Floor. */
+  .card-rank{ font-size:.78rem; top:2px; left:3px; min-width:.8em; }
+  .card-rank::after{ font-size:.6em; }
+  .card-rank-bottom{ bottom:2px; right:3px; }
+  .card .card-suit::before{ font-size:1.28rem; }
+  .card-back::after{ width:38%; }
+  /* Softer shadow stack: 13 multi-layer shadows is the phone's real cost */
+  .card{ box-shadow:
+    inset 0 1px 0 var(--edge-light),
+    inset 0 -1px 0 rgba(120,96,58,.28),
+    0 1px 1px var(--contact),
+    0 5px 12px -5px rgba(0,0,0,.45); }
+}
+
+/* ============================================================
+   TABLE — felt, rail, light pool, nameplates, trick well
+   ============================================================ */
+
+/* The rail is painted as a background layer clipped to border-box
+   while the felt clips to padding-box. This gives a gradient rail
+   that still follows border-radius (border-image does not). */
+#game-container{
+  position:relative;
+  width:100%;
+  max-width:900px;
+  height:100vh; height:100dvh; max-height:700px;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+  border:10px solid transparent;
+  border-radius:22px;
+  background-color: var(--felt);
+  background-image:
+    radial-gradient(78% 52% at 50% 34%, rgba(255,236,190,.15) 0%, rgba(255,236,190,0) 62%),
+    radial-gradient(125% 90% at 42% 14%,
+      var(--felt-key) 0%, var(--felt) 40%, var(--felt-shade) 76%, var(--felt-deep) 100%),
+    linear-gradient(160deg, var(--rail-hi) 0%, var(--rail) 45%, var(--rail-lo) 100%);
+  background-clip:   padding-box, padding-box, border-box;
+  background-origin: padding-box, padding-box, border-box;
+  box-shadow:
+    inset 0 0 0 1px rgba(230,200,119,.26),      /* brass inlay at the felt edge */
+    inset 0 3px 12px rgba(0,0,0,.48),
+    inset 0 -48px 90px rgba(0,0,0,.30),
+    0 28px 64px -14px rgba(0,0,0,.7),
+    0 2px 0 rgba(255,255,255,.05);
+}
+
+#game-table{
+  position:relative;
+  flex-grow:1;
+  width:100%;
+}
+
+/* Wool tooth. One 140px tile of fractal noise, rasterised once and
+   repeated — not per-frame work. Keep the data URI as-is; it's ~230B. */
+#game-table::before{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23f)'/%3E%3C/svg%3E");
+  background-size:140px 140px;
+  opacity:.16;
+  mix-blend-mode: soft-light;
+}
+
+/* The key light: a warm pool over the trick area, vignette at the rails.
+   This is what makes the centre of play the brightest point on screen. */
+#game-table::after{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(46% 34% at 50% 44%, rgba(255,238,198,.16), rgba(255,238,198,0) 70%),
+    radial-gradient(120% 100% at 50% 50%, rgba(0,0,0,0) 46%, rgba(0,0,0,.36) 100%);
+}
+
+/* ---------- Nameplates: smoked glass on brass ---------- */
+.player-area{
+  position:absolute;
+  display:flex; flex-direction:column; align-items:center;
+  padding:8px 12px;
+  min-width:120px;
+  box-sizing:border-box;
+  border-radius:12px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.03) 46%, rgba(0,0,0,.12) 100%);
+  border:1px solid rgba(255,240,205,.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.16),
+    0 6px 18px -9px rgba(0,0,0,.7);
+  backdrop-filter: blur(6px) saturate(1.1);
+  -webkit-backdrop-filter: blur(6px) saturate(1.1);
+  /* `scale`, not `transform` — the positioning transforms live here too */
+  transition: scale .28s cubic-bezier(.2,.8,.25,1),
+              box-shadow .28s ease,
+              border-color .28s ease;
+}
+
+/* Team identity: a 6px enamel dot before the name. Red/blue is the
+   single safest colour pair across all CVD types. */
+#player-north-area, #player-south-area{ --team: var(--team-red);  }
+#player-east-area,  #player-west-area { --team: var(--team-blue); }
+.player-name{
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  margin-bottom:4px;
+  font-size:.95rem; font-weight:700;
+  letter-spacing:.01em;
+  color:#fbf6ec;
+  text-shadow:0 1px 2px rgba(0,0,0,.6);
+}
+.player-name::before{
+  content:''; flex:0 0 auto;
+  width:7px; height:7px; border-radius:50%;
+  background: var(--team, var(--brass-300));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 0 7px -1px var(--team, var(--brass-300)),
+    0 0 0 1px rgba(0,0,0,.35);
+}
+.player-info{
+  font-size:.74rem;
+  letter-spacing:.04em;
+  color: rgba(243,236,224,.66);
+  text-shadow:0 1px 2px rgba(0,0,0,.5);
+}
+
+/* ---------- Turn indicator: brass ring on a separate pseudo, so the
+   pulse animates opacity/scale only (compositor, no repaint) ---------- */
+.player-area::after{
+  content:''; position:absolute; inset:-3px;
+  border-radius:15px;
+  border:1.5px solid var(--brass-300);
+  opacity:0; pointer-events:none;
+  transition:opacity .25s ease;
+}
+.player-area.active-player{
+  scale:1.04;                                  /* NOT transform: it would
+                                                  wipe translateX(-50%) */
+  border-color: rgba(230,200,119,.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    0 0 0 1px rgba(230,200,119,.30),
+    0 12px 30px -12px rgba(0,0,0,.75);
+  z-index:10;
+}
+.player-area.active-player::after{ opacity:1; }
+
+/* ---------- Trick well: a shallow inlaid ring in the felt ---------- */
+#trick-area{
+  position:absolute; top:50%; left:50%;
+  transform: translate(-50%, -50%);
+}
+#trick-area::before{
+  content:''; position:absolute; top:50%; left:50%;
+  width:210px; height:210px;
+  translate:-50% -50%;
+  border-radius:50%;
+  pointer-events:none;
+  background: radial-gradient(circle,
+    rgba(255,238,198,.10) 0%, rgba(255,238,198,.03) 46%, rgba(255,238,198,0) 70%);
+  box-shadow:
+    inset 0 0 0 1px rgba(230,200,119,.15),
+    inset 0 0 26px rgba(0,0,0,.22);
+}
+
+/* ---------- Safe area ----------
+   The old `#player-hand-south { padding-bottom: env(...) }` is inert:
+   its children are position:absolute;bottom:0, which resolves against
+   the PADDING box. The inset has to go on `bottom`. */
+#player-hand-south{
+  position:absolute;
+  left:50%;
+  transform: translateX(-50%);
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  display:flex; justify-content:center;
+  width:100%;
+  height:104px;
+  padding-bottom:0;
+  z-index:100;
+}
+
+@media (max-width:700px){
+  #game-container{ max-height:none; height:100vh; height:100dvh; border-radius:0; border-width:0; }
+  .player-area{ padding:6px 10px; min-width:96px; }
+  #trick-area::before{ width:172px; height:172px; }
+}
+@media (max-width:480px){
+  #game-container{ height:100%; height:-webkit-fill-available; }
+  #player-hand-south{ bottom: calc(10px + env(safe-area-inset-bottom)); height:78px; }
+  #player-south-area{ bottom: calc(95px + env(safe-area-inset-bottom)); }
+  .player-area{ padding:5px 9px; min-width:74px; border-radius:10px; }
+  .player-area::after{ inset:-2px; border-radius:12px; }
+  .player-name{ font-size:.76rem; gap:5px; }
+  .player-name::before{ width:6px; height:6px; }
+  .player-info{ font-size:.65rem; }
+  #trick-area::before{ width:150px; height:150px; }
+  /* Cheapest correct fallback for the 4 blurred nameplates on older A-series */
+  .player-area{
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    background: linear-gradient(180deg, rgba(9,48,30,.72), rgba(4,26,16,.78));
+  }
+}
+@media (max-height:500px){
+  #player-hand-south{ bottom: calc(5px + env(safe-area-inset-bottom)); height:80px; }
+  #player-south-area{ bottom: calc(90px + env(safe-area-inset-bottom)); }
+  #player-hand-south .card:hover{ translate:0 -10px; scale:1.04; }
+  #player-hand-south .card.playable:hover{ translate:0 -12px; scale:1.06; }
+}
+
+/* ============================================================
+   MOTION — every keyframe animates `translate` / `rotate` /
+   `scale` / `opacity`, never `transform`, so nothing collides
+   with the inline fan transform written by createCardElement().
+   ============================================================ */
+
+/* ---------- 1. DEAL: AI hands, staggered off --i (set by renderAllHands) ---------- */
+.ai-hand{ position:relative; display:flex; margin-top:6px; height:90px; }
+.ai-hand .card-back{
+  position:absolute;
+  animation: deal-in .42s cubic-bezier(.2,.78,.25,1) backwards;
+  animation-delay: calc(var(--i, 0) * 42ms);
+}
+@keyframes deal-in{
+  from{ opacity:0; translate:0 -46px; rotate:-14deg; scale:.88; }
+  to  { opacity:1; translate:0 0;     rotate:0deg;   scale:1;   }
+}
+
+/* South hand has no --i, so it settles as one gesture. Short on purpose:
+   renderAllHands() re-runs after every trick, so this replays often. */
+#player-hand-south .card{
+  animation: hand-settle .24s cubic-bezier(.2,.78,.25,1) backwards;
+}
+@keyframes hand-settle{
+  from{ opacity:0; translate:0 24px; scale:.94; }
+  to  { opacity:1; translate:0 0;    scale:1;   }
+}
+
+/* ---------- 2. PLAY: the card arrives from its owner's seat ---------- */
+#trick-card-north .card{ --fx:0;      --fy:-150px; --fr:-9deg; --rest:-3deg; }
+#trick-card-south .card{ --fx:0;      --fy: 150px; --fr: 9deg; --rest: 2deg; }
+#trick-card-west  .card{ --fx:-165px; --fy: 20px;  --fr:-13deg;--rest: 4deg; }
+#trick-card-east  .card{ --fx: 165px; --fy: 20px;  --fr: 13deg;--rest:-4deg; }
+
+#trick-area .card{
+  position:relative;
+  animation: play-in .34s cubic-bezier(.16,.8,.28,1) both;
+}
+@keyframes play-in{
+  from{
+    opacity:0;
+    translate: var(--fx,0) var(--fy,0);
+    rotate: var(--fr, 0deg);
+    scale:.84;
+    box-shadow:
+      inset 0 1px 0 var(--edge-light),
+      0 0 0 rgba(0,0,0,0),
+      0 30px 40px -14px rgba(0,0,0,.15);
+  }
+  70%{ opacity:1; }
+  to{
+    opacity:1;
+    translate:0 0;
+    rotate: var(--rest, 0deg);
+    scale:1;
+    /* shadow tightens as the card makes contact with the felt */
+    box-shadow:
+      inset 0 1px 0 var(--edge-light),
+      inset 0 -1px 0 rgba(120,96,58,.30),
+      0 1px 1px rgba(6,14,9,.4),
+      0 4px 8px -2px rgba(0,0,0,.38),
+      0 12px 22px -12px rgba(0,0,0,.5);
+  }
+}
+
+/* ---------- 3. TRICK COLLECT ----------
+   Needs one class from JS. In clearTrickArea(), before emptying:
+     trickArea.classList.add('collect-' + winnerVisualPos);
+   and remove it after the cards are cleared. Without that line the
+   rest of the design is unaffected — this is purely additive. */
+#trick-area[class*="collect-"] .card{
+  animation: collect .30s cubic-bezier(.5,0,.85,.4) forwards;
+}
+@keyframes collect{
+  from{ opacity:1; translate:0 0;  scale:1;   }
+  to  { opacity:0; translate: var(--cx,0) var(--cy,0); rotate:var(--cr,0deg); scale:.72; }
+}
+#trick-area.collect-north .card{ --cx:0;      --cy:-170px; --cr:-10deg; }
+#trick-area.collect-south .card{ --cx:0;      --cy: 170px; --cr: 10deg; }
+#trick-area.collect-west  .card{ --cx:-190px; --cy: 10px;  --cr:-14deg; }
+#trick-area.collect-east  .card{ --cx: 190px; --cy: 10px;  --cr: 14deg; }
+
+/* ---------- 4. TURN INDICATOR: slow brass breath ---------- */
+.player-area.active-player::after{
+  animation: rail-pulse 2.4s ease-in-out infinite;
+}
+@keyframes rail-pulse{
+  0%,100%{ opacity:.34; scale:1;     }
+  50%    { opacity:1;   scale:1.014; }
+}
+
+/* Trump coin specular sweep — see chrome for the coin itself */
+@keyframes coin-sheen{
+  0%, 72%{ translate:0;    }
+  100%   { translate:430%; }
+}
+
+/* Reaction pop, rebuilt off transform */
+.player-reaction{
+  position:absolute; top:-10px; right:-10px;
+  font-size:2rem; pointer-events:none;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.6));
+  animation: reaction-pop .45s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes reaction-pop{
+  0%  { scale:0;   opacity:0; }
+  55% { scale:1.28; opacity:1; }
+  100%{ scale:1;   opacity:1; }
+}
+
+/* ---------- 5. REDUCED MOTION ----------
+   Nothing moves. Fades stay, capped at 120ms, so state changes are
+   still legible rather than instantaneous jump-cuts. */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:.001ms !important;
+    animation-delay:0ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+  }
+  #player-hand-south .card,
+  .ai-hand .card-back,
+  #trick-area .card{ animation:none !important; opacity:1 !important; }
+
+  #trick-area .card,
+  #modal-overlay,
+  #modal-overlay .modal-content,
+  #special-event-overlay,
+  #special-event-message{
+    transition: opacity .12s linear !important;
+  }
+  /* Turn indicator becomes a static ring, not a pulse */
+  .player-area.active-player::after{ animation:none !important; opacity:1 !important; }
+  .player-area.active-player{ scale:1 !important; }
+  #trump-display::after{ display:none !important; }
+  /* Hover lift becomes an instant, non-moving highlight */
+  #player-hand-south .card:hover{ translate:0 !important; scale:1 !important; }
+}
+
+/* ============================================================
+   CHROME — rail, score, trump coin, buttons, modals
+   NOTE: modals stay LIGHT on purpose. Dozens of inline styles in
+   the markup (color:#666, background:#e8f5e9, #f5f5f5 …) assume a
+   light panel; flipping them dark would break every one. So the
+   modal becomes warm card stock instead — premium, zero fallout.
+   ============================================================ */
+
+/* ---------- Rail / status bar ---------- */
+#status-bar{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:14px;
+  padding-top:    max(9px, env(safe-area-inset-top));
+  padding-right:  max(16px, env(safe-area-inset-right));
+  padding-bottom: 9px;
+  padding-left:   max(16px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, var(--rail-hi) 0%, var(--rail) 44%, var(--rail-lo) 100%);
+  border-bottom:1px solid rgba(0,0,0,.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    inset 0 -1px 0 rgba(230,200,119,.22),
+    0 8px 20px -10px rgba(0,0,0,.8);
+  color: var(--text-light);
+  font-size:.95rem; font-weight:600;
+}
+
+/* ---------- Trump coin: milled brass token, letterpressed ---------- */
+#trump-display{
+  justify-self:center;
+  position:relative; overflow:hidden;
+  display:inline-flex; align-items:center; gap:8px;
+  padding:5px 15px 6px;
+  border-radius:999px;
+  font-size:.8rem; font-weight:800;
+  letter-spacing:.13em; text-transform:uppercase;
+  color:#3a2a06;
+  background: linear-gradient(180deg,
+    var(--brass-100) 0%, var(--brass-300) 36%, var(--brass-400) 60%, var(--brass-600) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    inset 0 -1px 0 rgba(70,50,8,.55),
+    0 0 0 1px rgba(60,42,6,.6),
+    0 2px 4px rgba(0,0,0,.45),
+    0 8px 18px -8px rgba(200,150,40,.5);
+  text-shadow:0 1px 0 rgba(255,255,255,.5);
+}
+#trump-display:empty{ display:none; }
+#trump-display::after{                      /* specular sweep */
+  content:''; position:absolute;
+  top:0; left:-60%; width:40%; height:100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+  animation: coin-sheen 5.5s ease-in-out infinite;
+  pointer-events:none;
+}
+/* Engraved suit pip inside the coin, same four-colour system */
+#trump-display [class*="suit-"]{ font-size:0; color:transparent; line-height:0; }
+#trump-display [class*="suit-"] > img.emoji{ display:none !important; }
+#trump-display [class*="suit-"]::after{
+  font-size:1.05rem; line-height:1; display:inline-block;
+  text-shadow:0 1px 0 rgba(255,255,255,.45);
+}
+#trump-display .suit-S::after{ content:"\2660\FE0E"; color:#1b1508; }
+#trump-display .suit-H::after{ content:"\2665\FE0E"; color:#8e1020; }
+#trump-display .suit-D::after{ content:"\2666\FE0E"; color:#0d4a8f; }
+#trump-display .suit-C::after{ content:"\2663\FE0E"; color:#04553e; }
+
+/* ---------- Score bar: enamel chips ---------- */
+#score-bar{
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+  padding:7px max(16px, env(safe-area-inset-right)) 7px max(16px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, rgba(0,0,0,.36), rgba(0,0,0,.16));
+  border-bottom:1px solid rgba(0,0,0,.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    inset 0 -1px 0 rgba(230,200,119,.1);
+  font-size:.85rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+#score-display{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; line-height:1; }
+#score-display > span{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:3px 9px;
+  border-radius:999px;
+  background: rgba(0,0,0,.32);
+  border:1px solid rgba(255,240,205,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  font-size:.78rem; font-weight:600;
+  letter-spacing:.04em;
+  white-space:nowrap;
+}
+#score-display #hand-score{
+  font-style:normal;
+  color: rgba(243,236,224,.7);
+  background: rgba(0,0,0,.2);
+  font-size:.72rem;
+}
+.team-red-text { color: var(--team-red);  font-weight:800; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+.team-blue-text{ color: var(--team-blue); font-weight:800; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+/* Inside light modals the bright team colours drop under 3:1 — swap to ink */
+.modal-content .team-red-text { color: var(--team-red-ink);  text-shadow:none; }
+.modal-content .team-blue-text{ color: var(--team-blue-ink); text-shadow:none; }
+
+#status-message{
+  flex:1;
+  text-align:right;
+  min-height:1.2em;
+  font-style:normal;
+  font-size:.78rem;
+  letter-spacing:.05em;
+  color: rgba(243,236,224,.78);
+  text-shadow:0 1px 2px rgba(0,0,0,.55);
+}
+
+/* ---------- Icon buttons: brass-rimmed dark discs ---------- */
+.icon-btn{
+  position:relative;
+  width:34px; height:34px; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:50%;
+  background:
+    radial-gradient(120% 120% at 35% 25%, rgba(255,255,255,.18), rgba(255,255,255,.02) 62%),
+    linear-gradient(180deg, #3b2a20, #1c110c);
+  border:1px solid rgba(230,200,119,.34);
+  color: var(--brass-200);
+  font-size:1.1rem; font-weight:700; line-height:1;
+  cursor:pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.16),
+    0 2px 4px rgba(0,0,0,.5);
+  transition: scale .16s ease, box-shadow .16s ease, border-color .16s ease, color .16s ease;
+}
+.icon-btn::before{                    /* 46px tap target without 46px of layout */
+  content:''; position:absolute; inset:-6px; border-radius:50%;
+}
+.icon-btn:hover{
+  color: var(--brass-100);
+  border-color: rgba(230,200,119,.62);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 3px 8px rgba(0,0,0,.55), 0 0 14px -3px rgba(226,186,92,.55);
+  transform:none; scale:1.06;
+}
+.icon-btn:active{ scale:.94; }
+.icon-btn:focus-visible{ outline:2px solid var(--focus); outline-offset:3px; }
+#share-btn{ font-size:1.6rem; font-weight:400; }
+
+/* ---------- Modal: warm card stock, brass edge, deep drop ---------- */
+#modal-overlay{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  z-index:200;
+  opacity:0; visibility:hidden;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(4,14,9,.58), rgba(0,0,0,.84));
+  backdrop-filter: blur(3px) saturate(.92);
+  -webkit-backdrop-filter: blur(3px) saturate(.92);
+  transition: opacity .26s ease, visibility .26s ease;
+}
+#modal-overlay.visible{ opacity:1; visibility:visible; }
+
+.modal-content{
+  position:relative; overflow:hidden;
+  padding:26px 24px;
+  border-radius:16px;
+  color: var(--ink);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,0) 30%),
+    radial-gradient(125% 80% at 20% 0%, #fffdf7 0%, var(--stock) 58%, var(--stock-200) 100%);
+  border:1px solid rgba(120,96,58,.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 0 0 1px rgba(230,200,119,.35),
+    0 6px 14px rgba(0,0,0,.4),
+    0 34px 64px -22px rgba(0,0,0,.78);
+  text-align:center;
+  /* `scale`, not `transform` — keeps translate-based centring free */
+  transform:none;
+  scale:.92; opacity:0;
+  transition: scale .28s cubic-bezier(.2,.8,.25,1), opacity .2s ease;
+}
+#modal-overlay.visible .modal-content{ transform:none; scale:1; opacity:1; }
+.modal-content::before{              /* gold rule across the top edge */
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--brass-400), var(--brass-200), var(--brass-400), transparent);
+}
+.modal-content h2{
+  margin:0 0 6px;
+  font-size:1.55rem; font-weight:800; letter-spacing:-.015em;
+  color:#20242b;
+}
+.modal-content p{ font-size:1rem; color: var(--ink-soft); margin-bottom:22px; }
+
+/* ---------- Trump chooser: four pieces of card stock ---------- */
+#trump-selection-buttons{ display:flex; justify-content:center; gap:12px; }
+.trump-btn{
+  position:relative;
+  width:76px; height:100px;
+  border-radius:9px;
+  border:1px solid var(--stock-edge);
+  cursor:pointer;
+  font-size:0; color:transparent; line-height:0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,0) 40%),
+    radial-gradient(125% 90% at 20% 6%, #fffefb 0%, var(--stock) 58%, var(--stock-200) 100%);
+  background-color: transparent;
+  box-shadow:
+    inset 0 1px 0 var(--edge-light),
+    inset 0 -1px 0 rgba(120,96,58,.3),
+    0 2px 3px rgba(0,0,0,.25),
+    0 14px 26px -14px rgba(0,0,0,.6);
+  transition: translate .16s ease, scale .16s ease, box-shadow .16s ease;
+}
+.trump-btn > img.emoji{ display:none !important; }
+.trump-btn::before{
+  content: var(--pip);
+  display:flex; align-items:center; justify-content:center;
+  width:100%; height:100%;
+  font-size:2.5rem; line-height:1; color: var(--suit);
+  text-shadow:0 1px 0 rgba(255,255,255,.7);
+}
+.trump-btn::after{
+  content: var(--pip);
+  position:absolute; top:6px; left:8px;
+  font-size:.95rem; line-height:1; color: var(--suit);
+}
+.trump-btn.suit-S{ --pip:"\2660\FE0E"; --suit:var(--suit-spade);   background-color:transparent; color:transparent; }
+.trump-btn.suit-H{ --pip:"\2665\FE0E"; --suit:var(--suit-heart);   background-color:transparent; color:transparent; }
+.trump-btn.suit-D{ --pip:"\2666\FE0E"; --suit:var(--suit-diamond); background-color:transparent; color:transparent; }
+.trump-btn.suit-C{ --pip:"\2663\FE0E"; --suit:var(--suit-club);    background-color:transparent; color:transparent; }
+.trump-btn:hover{
+  transform:none; translate:0 -6px; scale:1.02;
+  box-shadow:
+    inset 0 1px 0 var(--edge-light),
+    0 0 0 1.5px var(--brass-300),
+    0 4px 6px rgba(0,0,0,.3),
+    0 22px 34px -16px rgba(0,0,0,.7);
+}
+.trump-btn:active{ translate:0 -1px; scale:.99; transition-duration:.08s; }
+.trump-btn:focus-visible{ outline:2px solid var(--focus); outline-offset:3px; }
+
+/* ---------- Buttons ---------- */
+.menu-btn, #play-again-btn{
+  font-family:'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size:1rem; font-weight:700; letter-spacing:.01em;
+  padding:14px 22px;
+  width:100%; margin-bottom:10px;
+  border-radius:12px; border:1px solid transparent;
+  cursor:pointer;
+  transition: scale .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+.menu-btn:hover, #play-again-btn:hover{ transform:none; scale:1.015; }
+.menu-btn:active, #play-again-btn:active{ scale:.985; transition-duration:.07s; }
+.menu-btn:focus-visible, #play-again-btn:focus-visible{ outline:2px solid var(--brass-500); outline-offset:2px; }
+
+.menu-btn-primary, #play-again-btn{
+  color:#2c2005;
+  background: linear-gradient(180deg,
+    var(--brass-100) 0%, var(--brass-300) 40%, var(--brass-400) 60%, var(--brass-600) 100%);
+  border-color: rgba(70,50,8,.5);
+  text-shadow:0 1px 0 rgba(255,255,255,.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.85),
+    inset 0 -1px 0 rgba(70,50,8,.5),
+    0 2px 4px rgba(0,0,0,.28),
+    0 12px 22px -14px rgba(190,145,40,.9);
+}
+.menu-btn-primary:hover, #play-again-btn:hover{ filter:brightness(1.06); }
+
+.menu-btn-secondary{
+  color: var(--stock-100);
+  background: linear-gradient(180deg, #146b45 0%, #0b4a2e 55%, #083a24 100%);
+  border-color: rgba(230,200,119,.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.16),
+    0 2px 4px rgba(0,0,0,.3),
+    0 10px 20px -14px rgba(0,0,0,.8);
+}
+.menu-btn-secondary:hover{ background: linear-gradient(180deg, #17805 2%, #0d5836 55%, #0a4429 100%); filter:brightness(1.05); }
+
+.menu-btn:disabled, #play-again-btn:disabled{
+  background: linear-gradient(180deg, #cfc9bd, #aea798);
+  color:#6a6458; border-color:rgba(0,0,0,.12);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5);
+  opacity:1; cursor:not-allowed;
+}
+.menu-btn:disabled:hover, #play-again-btn:disabled:hover{ scale:1; filter:none; }
+
+.back-btn{
+  background:none; border:none; cursor:pointer;
+  color: var(--ink-soft); font-size:.9rem; font-weight:600;
+  margin-top:8px; padding:8px 12px; border-radius:8px;
+  transition: color .15s ease, background .15s ease;
+}
+.back-btn:hover{ color: var(--ink); background: rgba(120,96,58,.1); }
+
+.copy-btn, .team-select-btn, .kick-btn{
+  border:1px solid rgba(70,50,8,.35); border-radius:7px;
+  padding:6px 11px; cursor:pointer;
+  font-weight:700; font-size:.8rem;
+  color:#2c2005;
+  background: linear-gradient(180deg, var(--brass-200), var(--brass-400));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 1px 2px rgba(0,0,0,.22);
+}
+.kick-btn{ color:#fff4f1; background:linear-gradient(180deg,#c4402c,#8e2818); border-color:rgba(0,0,0,.3); }
+
+#name-input, #join-input, #join-name-input, #friend-id-input, #email-auth-form input{
+  background:#fffdf8;
+  border:1px solid rgba(120,96,58,.3);
+  border-radius:10px;
+  box-shadow: inset 0 2px 4px rgba(120,96,58,.12);
+  color: var(--ink);
+}
+#name-input:focus, #join-input:focus, #join-name-input:focus,
+#friend-id-input:focus, #email-auth-form input:focus{
+  outline:none;
+  border-color: var(--brass-500);
+  box-shadow: inset 0 2px 4px rgba(120,96,58,.1), 0 0 0 3px rgba(207,167,70,.3);
+}
+
+/* ---------- Foil headline for the Ace-Catch-King moment ---------- */
+#special-event-overlay{
+  background: radial-gradient(120% 90% at 50% 45%, rgba(10,26,16,.86), rgba(0,0,0,.94));
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+#special-event-message{
+  font-weight:900; letter-spacing:-.015em;
+  color:transparent;
+  background: linear-gradient(180deg,
+    #fff6d8 0%, var(--brass-200) 28%, var(--brass-400) 50%, #fff2c9 60%, var(--brass-500) 100%);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+  text-shadow:none;
+  filter: drop-shadow(0 2px 0 rgba(80,55,10,.65)) drop-shadow(0 12px 26px rgba(0,0,0,.8));
+  transform:none; scale:.86;
+  transition: scale .5s cubic-bezier(.2,.8,.25,1), opacity .4s ease;
+}
+#special-event-overlay.visible #special-event-message{ transform:none; scale:1; }
+
+/* ---------- Reaction picker: lacquer tray ---------- */
+#reaction-picker{
+  background: linear-gradient(180deg, rgba(38,26,19,.97), rgba(16,10,7,.98));
+  border:1px solid rgba(230,200,119,.35);
+  border-radius:18px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 30px 60px -20px rgba(0,0,0,.9);
+}
+.reaction-option{
+  background: rgba(255,255,255,.06);
+  border:1px solid rgba(230,200,119,.22);
+  border-radius:14px;
+  transition: scale .16s ease, background .16s ease, border-color .16s ease;
+}
+.reaction-option:hover{ transform:none; scale:1.12; background: rgba(255,255,255,.13); border-color: rgba(230,200,119,.5); }
+.reaction-option:active{ scale:.96; }
+.reaction-btn{
+  background: rgba(255,255,255,.1);
+  border:1px solid rgba(230,200,119,.3);
+  border-radius:50%; padding:3px 6px; margin-left:6px;
+  transition: scale .16s ease, background .16s ease;
+}
+.reaction-btn:hover{ transform:none; scale:1.15; background: rgba(255,255,255,.2); }
+
+@media (max-width:700px){
+  #trump-display{ font-size:.72rem; padding:4px 12px 5px; }
+  .trump-btn{ width:66px; height:88px; }
+  .trump-btn::before{ font-size:2.1rem; }
+  .modal-content{ padding:20px 18px; width:86%; }
+  .modal-content h2{ font-size:1.35rem; }
+}
+@media (max-width:480px){
+  .icon-btn{ width:30px; height:30px; font-size:1rem; }
+  #status-icons{ gap:6px; }
+  /* 4x62 + 3x10 = 278px — fits a 390px viewport with margin */
+  .trump-btn{ width:62px; height:84px; }
+  .trump-btn::before{ font-size:1.95rem; }
+  .trump-btn::after{ font-size:.8rem; top:5px; left:6px; }
+  #trump-selection-buttons{ gap:10px; }
+  .menu-btn, #play-again-btn{ padding:12px 16px; font-size:.92rem; }
+  .modal-content{ width:90%; max-height:85vh; overflow-y:auto; padding:18px 15px; border-radius:14px; }
+  #score-display > span{ font-size:.7rem; padding:2px 8px; }
+  #status-message{ font-size:.7rem; }
+}
+
+        /* ============================================================
+           LAYOUT CORRECTIONS (measured on a 390x844 iPhone viewport)
+
+           The opponent fans used a fixed per-card step that assumed far
+           more room than exists: north stepped 15px x 13 cards = 230px of
+           cards inside a 126px panel, so the fan escaped its box by 162px
+           and ran 30px off the right edge of the screen; west/east stepped
+           10px and spilled 92px below their panels.
+
+           The step is now a variable sized so the whole fan fits its panel,
+           and the fan element is sized to exactly what it contains, so
+           nothing can escape. Values widen on larger viewports.
+           ============================================================ */
+        .ai-hand {
+            --fan-step: 5px;
+            --fan-count: 12;   /* 13 cards = 12 gaps */
+        }
+
+        #player-north-area .ai-hand {
+            width: calc(50px + var(--fan-count) * var(--fan-step));
+            height: 75px;
+            margin-inline: auto;
+        }
+        #player-north-area .ai-hand .card-back {
+            left: calc(var(--i) * var(--fan-step));
+        }
+
+        #player-west-area .ai-hand,
+        #player-east-area .ai-hand {
+            --fan-step: 4px;
+            width: 50px;
+            height: calc(75px + var(--fan-count) * var(--fan-step));
+            margin-inline: auto;
+        }
+        #player-west-area .ai-hand .card-back,
+        #player-east-area .ai-hand .card-back {
+            top: calc(var(--i) * var(--fan-step));
+        }
+
+        /* Roomier fans once there is width to spend */
+        @media (min-width: 701px) {
+            #player-north-area .ai-hand { --fan-step: 14px; width: calc(60px + var(--fan-count) * var(--fan-step)); height: 90px; }
+            #player-west-area .ai-hand,
+            #player-east-area .ai-hand  { --fan-step: 9px;  width: 60px; height: calc(90px + var(--fan-count) * var(--fan-step)); }
+        }
+
+        /* The panels size to their contents rather than a guessed minimum */
+        #player-north-area, #player-west-area, #player-east-area {
+            width: max-content;
+            max-width: calc(100vw - 20px);
+        }
+
+
+        /* A targeted re-render (a card leaving a hand) must not replay the deal. */
+        .ai-hand.no-deal-anim .card-back,
+        #player-hand-south.no-deal-anim .card { animation: none !important; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ai-hand .card-back, #player-hand-south .card, #trick-area .card { animation: none !important; }
+        }
+
+
+        /* Keyboard focus must be visible — the cards are now real controls. */
+        #player-hand-south .card:focus-visible,
+        .menu-btn:focus-visible, .icon-btn:focus-visible, .trump-btn:focus-visible,
+        .reaction-option:focus-visible, .auth-btn:focus-visible, .copy-btn:focus-visible,
+        .back-btn:focus-visible, button:focus-visible, input:focus-visible {
+            outline: 3px solid var(--focus, #ffd782);
+            outline-offset: 2px;
+            border-radius: 6px;
+        }
+
+
+        /* Features whose backend is not wired up yet: visibly unavailable
+           rather than live buttons that silently do nothing. */
+        .menu-btn-pending {
+            opacity: .45;
+            cursor: not-allowed;
+            filter: saturate(.5);
+        }
+        .menu-btn-pending:hover { transform: none; scale: 1; }
+
+
+        /* --- Tap targets and safe areas -------------------------------------
+           The in-game icon buttons were 32px, dropping to 28px on phones, well
+           under the 44px minimum. The visual circle is kept small so the chrome
+           still looks light; the touch area is enlarged with a transparent
+           ::after so the hit target meets the minimum without a layout change. */
+        .icon-btn, .reaction-btn, .copy-btn, .reaction-option {
+            position: relative;
+        }
+        .icon-btn::after, .reaction-btn::after, .copy-btn::after, .reaction-option::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            translate: -50% -50%;
+            width: max(100%, 44px);
+            height: max(100%, 44px);
+        }
+
+        /* Horizontal safe areas: in landscape on a notched iPhone the side
+           player areas and the status bar sat under the notch / home indicator. */
+        @supports (padding: env(safe-area-inset-left)) {
+            #status-bar {
+                padding-left: max(10px, env(safe-area-inset-left));
+                padding-right: max(10px, env(safe-area-inset-right));
+            }
+            #game-table {
+                padding-left: env(safe-area-inset-left);
+                padding-right: env(safe-area-inset-right);
+                padding-bottom: env(safe-area-inset-bottom);
+                box-sizing: border-box;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -1383,12 +2521,12 @@
         <!-- Top Status Bar -->
         <div id="status-bar">
             <div id="status-icons-left">
-                <button id="menu-btn" class="icon-btn" title="Menu" style="display: none;">☰</button>
+                <button id="menu-btn" class="icon-btn" title="Menu" aria-label="Menu" style="display: none;">☰</button>
             </div>
             <div id="trump-display"></div>
             <div id="status-icons">
-                <button id="help-btn" class="icon-btn" title="Game Rules">?</button>
-                <button id="share-btn" class="icon-btn" title="Invite Players" style="display: none;">+</button>
+                <button id="help-btn" class="icon-btn" title="Game Rules" aria-label="Game rules">?</button>
+                <button id="share-btn" class="icon-btn" title="Invite Players" aria-label="Invite players" style="display: none;">+</button>
             </div>
         </div>
 
@@ -1398,7 +2536,7 @@
                 <span id="game-score">Games: <span id="game-score-red" class="team-red-text">0</span> - <span id="game-score-blue" class="team-blue-text">0</span></span>
                 <span id="hand-score">Hands: <span id="hand-score-red" class="team-red-text">0</span> - <span id="hand-score-blue" class="team-blue-text">0</span></span>
             </div>
-            <div id="status-message">Starting new game...</div>
+            <div id="status-message" role="status" aria-live="polite" aria-atomic="true">Starting new game...</div>
         </div>
 
         <!-- Main Game Table -->
@@ -1646,7 +2784,7 @@
                 <div id="share-code-display" style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0;">
                     <p style="margin: 5px 0; font-size: 0.9rem;">Game Code:</p>
                     <p id="share-code-text" style="font-size: 1.8rem; font-weight: 700; color: var(--table-green-dark); letter-spacing: 3px; margin: 5px 0;">------</p>
-                    <button class="copy-btn" id="copy-code-btn">Copy Code</button>
+                    <button class="copy-btn" id="share-copy-code-btn">Copy Code</button>
                 </div>
                 <div style="background: #f5f5f5; padding: 10px; border-radius: 8px; margin: 15px 0;">
                     <p style="margin: 5px 0; font-size: 0.75rem; color: #666;">Share Link:</p>
@@ -1814,13 +2952,13 @@
 
         <!-- Reaction Picker -->
         <div id="reaction-picker" style="display: none;">
-            <button class="reaction-option" data-emoji="❤️">❤️</button>
-            <button class="reaction-option" data-emoji="👍">👍</button>
-            <button class="reaction-option" data-emoji="👎">👎</button>
-            <button class="reaction-option" data-emoji="😂">😂</button>
-            <button class="reaction-option" data-emoji="😭">😭</button>
-            <button class="reaction-option" data-emoji="🖕">🖕</button>
-            <button class="reaction-option" data-emoji="😠">😠</button>
+            <button class="reaction-option" data-emoji="❤️" aria-label="Love it">❤️</button>
+            <button class="reaction-option" data-emoji="👍" aria-label="Nice play">👍</button>
+            <button class="reaction-option" data-emoji="👎" aria-label="Bad play">👎</button>
+            <button class="reaction-option" data-emoji="😂" aria-label="Laugh">😂</button>
+            <button class="reaction-option" data-emoji="😭" aria-label="Crying">😭</button>
+            <button class="reaction-option" data-emoji="🖕" aria-label="Rude">🖕</button>
+            <button class="reaction-option" data-emoji="😠" aria-label="Angry">😠</button>
         </div>
     </div>
 
@@ -2254,7 +3392,7 @@
              * Initialize or load user stats from Firestore
              */
             async function initializeUserStats() {
-                if (!currentUser) return;
+                if (!canUseCloudStats()) return;
 
                 try {
                     const userRef = db.collection('users').doc(currentUser.uid);
@@ -2291,7 +3429,7 @@
              * Update stats after a game ends
              */
             async function updateStatsAfterGame(didWin, wasCoat, wasAceKing, myTeam) {
-                if (!currentUser || !userStats) return;
+                if (!canUseCloudStats() || !userStats) return;
 
                 try {
                     const userRef = db.collection('users').doc(currentUser.uid);
@@ -2362,7 +3500,7 @@
              * Check and award achievements
              */
             async function checkAchievements(didWin, wasCoat, wasAceKing) {
-                if (!currentUser || !userStats) return;
+                if (!canUseCloudStats() || !userStats) return;
 
                 const newAchievements = [];
 
@@ -2422,10 +3560,20 @@
             }
 
             /**
+             * Cloud stats require a real, non-anonymous account AND a configured
+             * project. currentUser alone is not enough: the app signs guests in
+             * anonymously so they can play, and those guests were being written
+             * into the global leaderboard and users collection.
+             */
+            function canUseCloudStats() {
+                return !!(firebaseEnabled && db && currentUser && !isAnonymous);
+            }
+
+            /**
              * Update leaderboard with current user's stats
              */
             async function updateLeaderboard() {
-                if (!currentUser || !userStats) return;
+                if (!canUseCloudStats() || !userStats) return;
 
                 try {
                     const leaderboardRef = db.collection('leaderboard').doc(currentUser.uid);
@@ -2447,7 +3595,7 @@
              * Save game to history
              */
             async function saveGameHistory(didWin, wasCoat, wasAceKing, myTeam) {
-                if (!currentUser) return;
+                if (!canUseCloudStats()) return;
 
                 try {
                     const historyRef = db.collection('users').doc(currentUser.uid)
@@ -2516,7 +3664,7 @@
              * Get game history
              */
             async function getGameHistory(limit = 50) {
-                if (!currentUser) return [];
+                if (!canUseCloudStats()) return [];
 
                 try {
                     const snapshot = await db.collection('users').doc(currentUser.uid)
@@ -3230,9 +4378,9 @@
                     }
                 }
 
-                // Update UI
+                // Update UI — only the hand that actually lost a card
                 renderPlayedCard(player, card);
-                renderAllHands();
+                renderAllHands(player);
 
                 // Broadcast in multiplayer
                 if (isMultiplayer && isHost) {
@@ -3303,6 +4451,15 @@
                 console.log(`Trick over. Winner: ${winner} (${winnerTeam}).`);
                 updateStatusMessage(`${capitalize(winner)} wins the hand!`); // UPDATED: trick -> hand
                 updateHandScoreDisplay(); // NEW
+
+                // Sweep the won trick toward whoever took it. The class drives a
+                // pure-CSS transform; it is cleared when the trick area is rebuilt.
+                const trickEl = document.getElementById('trick-area');
+                if (trickEl) {
+                    trickEl.classList.remove('collect-north', 'collect-south', 'collect-east', 'collect-west');
+                    // Animate toward the winner's seat as THIS viewer sees it.
+                    trickEl.classList.add(`collect-${getVisualPosition(winner)}`);
+                }
 
                 // Show "TAKES THE HAND!" animation for each trick won
                 const winnerName = winnerTeam === 'teamRed' ? 'RED' : 'BLUE';
@@ -3642,13 +4799,24 @@
             /**
              * Renders all player hands (human's cards, AI's card backs).
              */
-            function renderAllHands() {
-                POSITIONS.forEach(pos => {
+            /**
+             * Re-renders hands. Pass a position (or array of them) to rebuild only
+             * those: playing a card used to rebuild all four hands — ~52 elements —
+             * on every single play, which both churned the DOM and restarted the
+             * deal-in animation on the three hands that had not changed.
+             */
+            function renderAllHands(only) {
+                const targets = only ? (Array.isArray(only) ? only : [only]) : POSITIONS;
+                // A full render is a deal; a targeted one is a card leaving a hand,
+                // which must not look like the hand is being dealt again.
+                const isDeal = !only;
+                targets.forEach(pos => {
                     const hand = players[pos].hand;
                     const handEl = playerHands[pos];
                     const countEl = cardCounts[pos];
 
                     handEl.innerHTML = '';
+                    handEl.classList.toggle('no-deal-anim', !isDeal);
                     countEl.textContent = hand.length;
 
                     if (pos === 'south') {
@@ -3669,6 +4837,16 @@
                             cardEl.style.transform = `translateX(${offset}px) rotate(${((i / (totalCards - 1)) - 0.5) * 10}deg)`;
                             cardEl.style.zIndex = i;
                             cardEl.dataset.cardId = card.id;
+                            // The player's own cards are controls, not decoration:
+                            // make them focusable and operable from a keyboard.
+                            cardEl.setAttribute('role', 'button');
+                            cardEl.tabIndex = 0;
+                            cardEl.addEventListener('keydown', (ev) => {
+                                if (ev.key === 'Enter' || ev.key === ' ') {
+                                    ev.preventDefault();
+                                    cardEl.click();
+                                }
+                            });
                             handEl.appendChild(cardEl);
                         });
                     } else {
@@ -3686,16 +4864,26 @@
             /**
              * Creates the DOM element for a single card face.
              */
+            const SUIT_NAMES = { S: 'Spades', H: 'Hearts', D: 'Diamonds', C: 'Clubs' };
+            const RANK_NAMES = { J: 'Jack', Q: 'Queen', K: 'King', A: 'Ace' };
+
             function createCardElement(card) {
                 const el = document.createElement('div');
-                el.className = `card suit-${card.suit}`;
-                const rank = getRankSymbol(card.rank);
-                const suit = getSuitSymbol(card.suit);
+                // Only ever emit a suit class we recognise — the suit can arrive
+                // from a peer, and it is interpolated into a class name here.
+                const safeSuit = SUIT_NAMES[card.suit] ? card.suit : 'S';
+                el.className = `card suit-${safeSuit}`;
+                // escapeHtml: getRankSymbol returns the rank verbatim, and a peer
+                // controls that value on any card it sends.
+                const rank = escapeHtml(getRankSymbol(card.rank));
+                const suit = getSuitSymbol(safeSuit);
                 el.innerHTML = `
                     <div class="card-rank">${rank}</div>
                     <div class="card-suit">${parseEmojis(suit)}</div>
                     <div class="card-rank card-rank-bottom">${rank}</div>
                 `;
+                el.setAttribute('aria-label',
+                    `${RANK_NAMES[card.rank] || card.rank} of ${SUIT_NAMES[safeSuit]}`);
                 return el;
             }
 
@@ -3749,6 +4937,8 @@
                 for (const pos in trickCards) {
                     trickCards[pos].innerHTML = '';
                 }
+                // Drop the collect-* sweep so the next trick starts clean.
+                trickArea.classList.remove('collect-north', 'collect-south', 'collect-east', 'collect-west');
             }
 
             /**
@@ -3803,6 +4993,28 @@
                 modalOverlay.classList.remove('visible');
                 modalOverlay.classList.remove('trump-select'); // NEW: Clean up just in case
             }
+
+            // Escape closes the dismissible modals. Deliberately excludes trump
+            // selection and game-over, where a choice is required to continue.
+            const ESCAPABLE_CLOSERS = [
+                'close-help-btn', 'close-share-btn', 'close-game-menu-btn',
+                'close-about-btn', 'close-stats-btn', 'close-leaderboard-btn',
+                'auth-back-btn'
+            ];
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                // Reaction picker first, if it is the thing that is open.
+                if (typeof reactionPickerVisible !== 'undefined' && reactionPickerVisible) {
+                    reactionPicker.style.display = 'none';
+                    reactionPickerVisible = false;
+                    return;
+                }
+                for (const id of ESCAPABLE_CLOSERS) {
+                    const btn = document.getElementById(id);
+                    if (btn && btn.offsetParent !== null) { btn.click(); return; }
+                }
+            });
 
             /**
              * NEW: Shows a temporary full-screen message for special events.
@@ -4807,6 +6019,38 @@
 
             // --- MENU EVENT LISTENERS ---
 
+            /**
+             * Quick Match and Play with Friends were added to the menu ahead of the
+             * Firebase Realtime Database backend that drives them, so they were live
+             * buttons that silently did nothing. Until that backend is integrated
+             * (see FIREBASE_IMPLEMENTATION_README.md) they explain themselves rather
+             * than no-op. Host/Join over PeerJS work today and need no account.
+             */
+            function reflectOnlineFeatureState() {
+                const pending = [
+                    document.getElementById('quick-match-btn'),
+                    document.getElementById('play-with-friends-btn')
+                ];
+                pending.forEach(btn => {
+                    if (!btn) return;
+                    btn.disabled = true;
+                    btn.classList.add('menu-btn-pending');
+                    btn.title = firebaseEnabled
+                        ? 'Online matchmaking is not wired up yet — use Host/Join to play with others.'
+                        : 'Needs a configured Firebase project — use Host/Join to play with others.';
+                });
+
+                // Sign-in cannot work without a Firebase project either.
+                const authBtn = document.getElementById('show-auth-btn');
+                if (authBtn && !firebaseEnabled) {
+                    authBtn.disabled = true;
+                    authBtn.classList.add('menu-btn-pending');
+                    authBtn.title = 'Accounts need a configured Firebase project.';
+                }
+            }
+
+            reflectOnlineFeatureState();
+
             // --- AUTHENTICATION EVENT LISTENERS ---
 
             // Show auth modal button
@@ -4983,9 +6227,13 @@
                 hideModal();
             });
 
-            document.getElementById('copy-code-btn').addEventListener('click', () => {
+            // The share modal's copy button. It previously reused the lobby button's
+            // id, so getElementById returned the lobby one: this listener stacked a
+            // second handler onto that button (two competing label-reset timers) and
+            // the share modal's own button was left with no handler at all.
+            document.getElementById('share-copy-code-btn').addEventListener('click', () => {
                 navigator.clipboard.writeText(gameCode).then(() => {
-                    const btn = document.getElementById('copy-code-btn');
+                    const btn = document.getElementById('share-copy-code-btn');
                     btn.textContent = 'Copied!';
                     setTimeout(() => btn.textContent = 'Copy Code', 2000);
                 });
@@ -5420,7 +6668,10 @@
             document.querySelectorAll('.reaction-option').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const emoji = e.target.dataset.emoji;
+                    // currentTarget, not target: twemoji swaps the emoji glyph for an
+                    // <img>, so clicking the middle of the button returns the image,
+                    // which carries no dataset — the button did nothing.
+                    const emoji = e.currentTarget.dataset.emoji;
                     // The picker stores the visual position, but we need to send the logical position
                     const visualPos = reactionPicker.dataset.position || 'south';
                     const logicalPos = getLogicalPosition(visualPos);
