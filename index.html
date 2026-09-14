@@ -377,9 +377,7 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            /* REMOVED width/height */
             transform: translate(-50%, -50%);
-            /* REMOVED grid properties */
         }
 
         #trick-area .card {
@@ -404,10 +402,6 @@
         #trick-card-west { left: -60px; } /* Was grid-area: west */
         #trick-card-east { left: 60px; } /* Was grid-area: east */
 
-        /* Won Trick Stacks -- REMOVED */
-        /* .won-tricks-stack { ... } */
-        /* .won-tricks-stack .card-back { ... } */
-        /* .won-tricks-stack .card-back:nth-child(even) { ... } */
 
 
         /* Modal Overlays */
@@ -835,18 +829,6 @@
             }
             .ai-hand { height: 75px; }
 
-            #trick-area {
-                /* REMOVED width/height */
-            }
-
-            /* Won Stacks Responsive -- REMOVED */
-            /* .won-tricks-stack { ... } */
-            /* .won-tricks-stack .card-back { ... } */
-            /* #won-tricks-north { ... } */
-            /* #won-tricks-south { ... } */
-            /* #won-tricks-west { ... } */
-            /* #won-tricks-east { ... } */
-
             /* NEW: Adjust trick positions for smaller screen */
             #trick-card-south { top: 45px; }
             #trick-card-north { top: -45px; }
@@ -1043,9 +1025,9 @@
                 padding-top: max(6px, env(safe-area-inset-top));
             }
 
-            #player-hand-south {
-                padding-bottom: env(safe-area-inset-bottom);
-            }
+            /* Safe area for the hand is handled by the bottom: calc(... + env(...))
+               rule in the visual system below; padding does nothing here because
+               #player-hand-south is absolutely positioned. */
         }
 
         /* NEW: Special Event Overlay (Ace Catch King) */
@@ -2662,8 +2644,6 @@ body{
                 <div class="player-reaction" id="reaction-south"></div>
             </div>
 
-            <!-- Won trick stacks -- REMOVED -->
-            <!-- <div class="won-tricks-stack" id="won-tricks-north"></div> ... -->
 
             <!-- Center Trick Area -->
             <div id="trick-area">
@@ -3199,7 +3179,6 @@ body{
                 west: document.getElementById('trick-card-west'),
                 east: document.getElementById('trick-card-east'),
             };
-            // REMOVED wonTricksStacks
             const modalOverlay = document.getElementById('modal-overlay');
             const trumpModal = document.getElementById('trump-selection-modal');
             const trumpButtons = document.getElementById('trump-selection-buttons');
@@ -3414,47 +3393,6 @@ body{
                 }
             }
 
-            /**
-             * Update game stats after match ends
-             */
-            async function updateGameStats(didWin, wasCoat = false) {
-                if (!firebaseEnabled || !currentUser || isAnonymous || !userProfile) return;
-
-                try {
-                    const userRef = db.collection('users').doc(currentUser.uid);
-
-                    const updates = {
-                        'stats.gamesPlayed': firebase.firestore.FieldValue.increment(1),
-                        lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-
-                    if (didWin) {
-                        updates['stats.wins'] = firebase.firestore.FieldValue.increment(1);
-                        if (wasCoat) {
-                            updates['stats.coats'] = firebase.firestore.FieldValue.increment(1);
-                        }
-                    } else {
-                        updates['stats.losses'] = firebase.firestore.FieldValue.increment(1);
-                    }
-
-                    await userRef.update(updates);
-
-                    // Update local profile
-                    userProfile.stats.gamesPlayed++;
-                    if (didWin) {
-                        userProfile.stats.wins++;
-                        if (wasCoat) {
-                            userProfile.stats.coats++;
-                        }
-                    } else {
-                        userProfile.stats.losses++;
-                    }
-
-                    console.log('Game stats updated');
-                } catch (error) {
-                    console.error('Error updating game stats:', error);
-                }
-            }
 
             // --- STATS TRACKING FUNCTIONS ---
 
@@ -3769,6 +3707,13 @@ body{
             let currentPlayer = 'south';
             let gameHandCounts = { teamRed: 0, teamBlue: 0 }; // Tracks hands won in current game (first to 7 hands wins game)
             let gameState = 'INIT'; // INIT, DEALING, TRUMP_SELECTION, PLAYING, HAND_OVER, GAME_OVER, MATCH_OVER
+
+            // Tricks won by each team in the current hand. This was never declared:
+            // it worked only because sloppy mode turns the first assignment into an
+            // implicit global, so it leaked onto window and would throw if anything
+            // ever read it before the first write (the same defect that took out
+            // userStats). Declared with a valid initial shape.
+            let handTrickCounts = { teamRed: 0, teamBlue: 0 };
 
             // Track game outcome for stats
             let gameStartTeam = null;
@@ -4522,7 +4467,6 @@ body{
                 const winnerTeam = players[winner].team;
 
                 handTrickCounts[winnerTeam]++;
-                // REMOVED playerTrickCounts[winner]++;
                 handLeader = winner; // Winner leads next hand
                 currentPlayer = winner;
 
@@ -4550,7 +4494,6 @@ body{
                     specialEventMessage.style.color = 'var(--highlight-player)';
                 }, 600);
 
-                // REMOVED addCardToWonStack(winner);
 
                 // --- NEW: Check for hand-ending trick ---
                 if (handTrickCounts[winnerTeam] === 7) {
@@ -5012,7 +4955,6 @@ body{
             /**
              * NEW: Adds a card-back to the winner's stack.
              */
-            /* REMOVED addCardToWonStack function */
 
             /**
              * NEW: Highlights playable cards in the human player's hand.
@@ -5056,7 +4998,6 @@ body{
             /**
              * NEW: Clears the visual won trick stacks.
              */
-            /* REMOVED clearWonTricksDisplay function */
 
             function updateStatusMessage(msg) {
                 statusBar.message.textContent = msg;
@@ -6124,6 +6065,15 @@ body{
                     return `<span class="${teamClass}">${teamName}</span>`;
                 };
 
+                // This rebuild throws the count spans away and hardcodes "0". Capture
+                // what is currently displayed so the counts survive: the host reads
+                // them from local hands but a guest only ever learns them over the
+                // network, so re-deriving from state would blank them on a guest.
+                const priorCounts = {};
+                for (const pos of POSITIONS) {
+                    priorCounts[pos] = cardCounts[pos] ? cardCounts[pos].textContent : '0';
+                }
+
                 document.querySelector('#player-south-area .player-info').innerHTML =
                     `${getTeamInfo(southPlayer)} | <span id="card-count-south">0</span> cards`;
                 document.querySelector('#player-north-area .player-info').innerHTML =
@@ -6138,6 +6088,12 @@ body{
                 cardCounts.north = document.getElementById('card-count-north');
                 cardCounts.east = document.getElementById('card-count-east');
                 cardCounts.west = document.getElementById('card-count-west');
+
+                // Put the counts back, so calling this mid-game (a player dropping,
+                // a team switch) no longer shows every seat holding zero cards.
+                for (const pos of POSITIONS) {
+                    if (cardCounts[pos]) cardCounts[pos].textContent = priorCounts[pos];
+                }
             }
 
             /**
