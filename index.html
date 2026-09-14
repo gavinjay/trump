@@ -2565,6 +2565,28 @@ body{
             }
         }
 
+
+        /* Menu controls measured 38-43px tall — just under the 44px minimum.
+           Inline controls (copy/kick/team-select) keep their small visual size and
+           get a 44px hit area from the ::after expander defined above instead. */
+        .menu-btn,
+        .auth-btn,
+        #name-input,
+        #join-input,
+        #join-name-input,
+        #friend-id-input,
+        .back-btn {
+            min-height: 44px;
+        }
+
+
+        /* Face-up reveal uses the same fan geometry as the face-down hands, so it
+           cannot overflow the panels the way the old hardcoded steps did. */
+        .ai-hand.revealing .card { position: absolute; }
+        #player-north-area .ai-hand.revealing .card { left: calc(var(--i) * var(--fan-step)); }
+        #player-west-area .ai-hand.revealing .card,
+        #player-east-area .ai-hand.revealing .card { top: calc(var(--i) * var(--fan-step)); }
+
     </style>
 </head>
 <body>
@@ -4654,6 +4676,12 @@ body{
                 console.log(`Game Over. Winner: ${winningTeam}. Message: ${message}`);
                 gameState = 'GAME_OVER';
 
+                // The host drives endHand/showGameOver locally; nothing told the
+                // guests, so their screens froze on the last trick of the match.
+                if (isMultiplayer && isHost) {
+                    broadcast({ type: 'gameOver', winningTeam, message });
+                }
+
                 const winnerName = (winningTeam === 'teamRed') ? "Team Red" : "Team Blue";
                 const winnerColor = (winningTeam === 'teamRed') ? "var(--team-red)" : "var(--team-blue)";
 
@@ -4888,6 +4916,10 @@ body{
                 // A full render is a deal; a targeted one is a card leaving a hand,
                 // which must not look like the hand is being dealt again.
                 const isDeal = !only;
+                // Read the container width ONCE, before any innerHTML write below.
+                // Reading it inside the loop forced a synchronous layout on every
+                // iteration, because the write immediately above had invalidated it.
+                const containerWidth = gameContainer.clientWidth;
                 targets.forEach(pos => {
                     const hand = players[pos].hand;
                     const handEl = playerHands[pos];
@@ -4904,7 +4936,7 @@ body{
                         // --- FIX: Use wider spacing for small hands so they don't overlap ---
                         // 65px for small hands (side-by-side), 35px for full hands (overlapped)
                         const cardSlotWidth = totalCards <= 5 ? 65 : 35;
-                        const spreadWidth = Math.min((totalCards - 1) * cardSlotWidth, gameContainer.clientWidth * 0.8);
+                        const spreadWidth = Math.min((totalCards - 1) * cardSlotWidth, containerWidth * 0.8);
                         // --- End Fix ---
 
                         const startOffset = -spreadWidth / 2;
@@ -4974,6 +5006,7 @@ body{
                 const slotEl = trickCards[visualPos];
                 slotEl.innerHTML = '';
                 slotEl.appendChild(cardEl);
+                slotEl.dataset.cardId = card.id; // renderCurrentTrick diffs against this
              }
 
             /**
@@ -5014,6 +5047,7 @@ body{
             function clearTrickArea() {
                 for (const pos in trickCards) {
                     trickCards[pos].innerHTML = '';
+                    delete trickCards[pos].dataset.cardId; // keep renderCurrentTrick's cache honest
                 }
                 // Drop the collect-* sweep so the next trick starts clean.
                 trickArea.classList.remove('collect-north', 'collect-south', 'collect-east', 'collect-west');
@@ -5151,53 +5185,28 @@ body{
             function revealAllCards(duration = 3000) {
                 console.log("Revealing all players' cards...");
 
-                // Store original hand rendering state
-                const originalHandsHTML = {};
-                POSITIONS.forEach(pos => {
-                    if (pos !== 'south' && pos !== myPosition) {
-                        originalHandsHTML[pos] = playerHands[pos].innerHTML;
-                    }
-                });
+                const others = POSITIONS.filter(pos => pos !== 'south' && pos !== myPosition);
 
-                // Temporarily render all AI/other players' cards face-up
-                POSITIONS.forEach(pos => {
-                    if (pos === 'south' || pos === myPosition) {
-                        // Skip the human player's hand (already visible)
-                        return;
-                    }
-
-                    const hand = players[pos].hand;
+                others.forEach(pos => {
                     const handEl = playerHands[pos];
                     handEl.innerHTML = '';
-
-                    if (pos === 'north') {
-                        // North player (top) - show cards in a row
-                        hand.forEach((card, i) => {
-                            const cardEl = createCardElement(card);
-                            cardEl.style.position = 'absolute';
-                            cardEl.style.left = `${i * 15}px`;
-                            cardEl.style.setProperty('--i', i);
-                            handEl.appendChild(cardEl);
-                        });
-                    } else {
-                        // East/West players (sides) - show cards vertically
-                        hand.forEach((card, i) => {
-                            const cardEl = createCardElement(card);
-                            cardEl.style.position = 'absolute';
-                            cardEl.style.top = `${i * 10}px`;
-                            cardEl.style.setProperty('--i', i);
-                            handEl.appendChild(cardEl);
-                        });
-                    }
+                    handEl.classList.add('revealing', 'no-deal-anim');
+                    // Position comes from the same CSS --fan-step the face-down fans
+                    // use. This used to hardcode 15px/10px steps, which is exactly the
+                    // overflow bug that pushed the fans outside their panels.
+                    players[pos].hand.forEach((card, i) => {
+                        const cardEl = createCardElement(card);
+                        cardEl.style.setProperty('--i', i);
+                        handEl.appendChild(cardEl);
+                    });
                 });
 
-                // Restore card backs after duration
-                setTimeout(() => {
-                    POSITIONS.forEach(pos => {
-                        if (pos !== 'south' && pos !== myPosition && originalHandsHTML[pos]) {
-                            playerHands[pos].innerHTML = originalHandsHTML[pos];
-                        }
-                    });
+                // gameTimeout, so leaving the game cancels the restore instead of
+                // writing a stale hand back over a new one.
+                gameTimeout(() => {
+                    others.forEach(pos => playerHands[pos].classList.remove('revealing'));
+                    // Rebuild from state rather than restoring a serialised HTML string.
+                    renderAllHands(others);
                     console.log("Cards hidden again");
                 }, duration);
             }
@@ -5730,6 +5739,16 @@ body{
                         }
                         break;
 
+                    case 'gameOver':
+                        // Host has ended the match. Guests never heard about this, so
+                        // their board sat on the final trick with no result and no way
+                        // to start another game.
+                        if (!isHost && gameState !== 'GAME_OVER') {
+                            const team = data.winningTeam === 'teamRed' ? 'teamRed' : 'teamBlue';
+                            showGameOver(team, String(data.message || '').slice(0, 80));
+                        }
+                        break;
+
                     case 'playerLeft':
                         // The host has handed a disconnected player's seat to the AI.
                         if (!isHost && POSITIONS.includes(data.position)) {
@@ -5928,6 +5947,10 @@ body{
              * Render hands for guest (only sees their own cards)
              */
             function renderGuestHands() {
+                // Read before the clearing writes below, so the measurement does not
+                // force a synchronous layout.
+                const containerWidth = gameContainer.clientWidth;
+
                 // Clear all hands first
                 POSITIONS.forEach(pos => {
                     playerHands[pos].innerHTML = '';
@@ -5941,7 +5964,7 @@ body{
                 const totalCards = hand.length;
 
                 const cardSlotWidth = totalCards <= 5 ? 65 : 35;
-                const spreadWidth = Math.min((totalCards - 1) * cardSlotWidth, gameContainer.clientWidth * 0.8);
+                const spreadWidth = Math.min((totalCards - 1) * cardSlotWidth, containerWidth * 0.8);
                 const startOffset = -spreadWidth / 2;
 
                 hand.forEach((card, i) => {
@@ -5961,10 +5984,29 @@ body{
              * Render the current trick cards
              */
             function renderCurrentTrick() {
-                clearTrickArea();
+                // Guests call this on every state sync. It used to clear the whole
+                // trick and rebuild every card, which re-fired the play-card animation
+                // on cards that were already sitting on the table. Only touch the slots
+                // whose card actually changed.
+                const occupied = new Set();
+
                 currentHand.forEach(entry => {
-                    renderPlayedCard(entry.player, entry.card);
+                    const visualPos = getVisualPosition(entry.player);
+                    const slotEl = trickCards[visualPos];
+                    if (!slotEl) return;
+                    occupied.add(visualPos);
+                    if (slotEl.dataset.cardId !== entry.card.id) {
+                        renderPlayedCard(entry.player, entry.card);
+                        slotEl.dataset.cardId = entry.card.id;
+                    }
                 });
+
+                for (const pos in trickCards) {
+                    if (!occupied.has(pos) && trickCards[pos].dataset.cardId) {
+                        trickCards[pos].innerHTML = '';
+                        delete trickCards[pos].dataset.cardId;
+                    }
+                }
             }
 
             /**
@@ -6891,6 +6933,10 @@ body{
             // dropped if it isn't one of ours.
             const ALLOWED_REACTIONS = ['❤️', '👍', '👎', '😂', '😭', '🖕', '😠'];
 
+            // One pending hide timer per visual seat, so a new reaction replaces the
+            // old one's timer instead of being cut short by it.
+            const reactionHideTimers = { south: null, north: null, east: null, west: null };
+
             function showReaction(position, emoji) {
                 if (!ALLOWED_REACTIONS.includes(emoji)) return;
                 if (!POSITIONS.includes(position)) return;
@@ -6900,9 +6946,15 @@ body{
                 reactionEl.innerHTML = parseEmojis(emoji);
                 reactionEl.style.display = 'block';
 
-                // Hide after 8 seconds
-                setTimeout(() => {
+                // Cancel the previous hide timer for this seat. Without this, a second
+                // reaction sent within 8s inherited the first one's timer and vanished
+                // early — and every reaction left a timer running regardless.
+                if (reactionHideTimers[visualPos]) {
+                    clearTimeout(reactionHideTimers[visualPos]);
+                }
+                reactionHideTimers[visualPos] = setTimeout(() => {
                     reactionEl.style.display = 'none';
+                    reactionHideTimers[visualPos] = null;
                 }, 8000);
             }
 
