@@ -26,14 +26,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- PeerJS for multiplayer -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js" integrity="sha384-PMNj1TmCgXfW24/rfIyxYSAWwj2mffkMfguUWv08iNFcy0kTC0JN7E/tE+pJ7+fa" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- Twemoji for consistent emoji rendering -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" integrity="sha512-/PCHE/GeV8rkUkLCnYFPJRYxD/b0p5lWDE1F3qxw2LvKxUxNW7L8W6JZvz/4f4RDYvqNjPYgxQPYzwLxNRCiGw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- Firebase SDK -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-database-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js" integrity="sha384-W2KNuQB++WlH36jTPUEIXLCcksKgf1Ug2AzZ8MXLNCnI/XVvzwH64Ma2l4DgReNm" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js" integrity="sha384-Vj3Xqg/W2K/xfMuGvHfwjiCGJa5o7EIJ/zorc5hTx4x6cpzxOsdS9jHXOXcsWJ9W" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js" integrity="sha384-VrB/5HHMaAx3hGutdQdY+cjrA3EdTc4nZyK31WBwWQXyRMGVy/+XTCpWZjPATOom" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-database-compat.min.js" integrity="sha384-mko66L7NnVayL3+qXgcUGuMssIt52FTReCXnuMlVRCSdjjJXyq50vVM36Pijyn2M" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         :root {
             --table-green: #0a6c3a;
@@ -2513,6 +2513,58 @@ body{
             }
         }
 
+
+        /* --- Team colour contrast ------------------------------------------
+           On the felt the team labels measured 2.80:1 (red) and 3.28:1 (blue),
+           both under the 4.5:1 needed for text this size. These lighter tints
+           measure ~4.8:1 and ~5.1:1 against the felt while still reading clearly
+           as warm/cool. The in-modal --team-*-ink variants are unaffected: those
+           sit on cream and already pass. */
+        :root {
+            --team-red:  #ffb3a0;
+            --team-blue: #9fd0ff;
+        }
+
+
+        /* Available to assistive tech, invisible on screen. The scores were
+           distinguished from each other by colour alone. */
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
+            border: 0;
+        }
+
+
+        /* --- Modal overflow ------------------------------------------------
+           The base .modal-content had no height limit, so on a short viewport
+           (landscape phone, ~390px tall) the main menu ran past the screen with
+           no way to scroll: the name field and the lower buttons were simply
+           unreachable. Constrain every dialog and let it scroll. */
+        #modal-overlay {
+            overflow-y: auto;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .modal-content {
+            max-height: 88vh;
+            max-height: 88dvh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+        @supports (padding: env(safe-area-inset-bottom)) {
+            #modal-overlay {
+                padding-bottom: max(16px, env(safe-area-inset-bottom));
+                padding-left: max(16px, env(safe-area-inset-left));
+                padding-right: max(16px, env(safe-area-inset-right));
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -2533,8 +2585,8 @@ body{
         <!-- Score Bar -->
         <div id="score-bar">
             <div id="score-display">
-                <span id="game-score">Games: <span id="game-score-red" class="team-red-text">0</span> - <span id="game-score-blue" class="team-blue-text">0</span></span>
-                <span id="hand-score">Hands: <span id="hand-score-red" class="team-red-text">0</span> - <span id="hand-score-blue" class="team-blue-text">0</span></span>
+                <span id="game-score">Games: <span class="sr-only">Red </span><span id="game-score-red" class="team-red-text">0</span> <span aria-hidden="true">-</span> <span class="sr-only">Blue </span><span id="game-score-blue" class="team-blue-text">0</span></span>
+                <span id="hand-score">Hands: <span class="sr-only">Red </span><span id="hand-score-red" class="team-red-text">0</span> <span aria-hidden="true">-</span> <span class="sr-only">Blue </span><span id="hand-score-blue" class="team-blue-text">0</span></span>
             </div>
             <div id="status-message" role="status" aria-live="polite" aria-atomic="true">Starting new game...</div>
         </div>
@@ -2607,7 +2659,7 @@ body{
         </div>
 
         <!-- Modal Overlays -->
-        <div id="modal-overlay">
+        <div id="modal-overlay" role="dialog" aria-modal="true" aria-label="Game dialog">
             <!-- Main Menu Modal -->
             <div id="main-menu-modal" class="modal-content" style="display: none;">
                 <h2>New Game</h2>
@@ -3160,32 +3212,28 @@ body{
                     const userRef = db.collection('users').doc(user.uid);
                     const doc = await userRef.get();
 
+                    // This function and initializeUserStats() both own parts of the
+                    // SAME users/{uid} document. They used to .set() it with two
+                    // incompatible shapes — profile wrote a nested stats:{...} while
+                    // stats wrote the same counters flat — so whichever ran first won
+                    // and the other read a shape it did not understand, yielding NaN
+                    // stats or a missing avatar. Both now merge their own fields into
+                    // one flat document, and neither clobbers the other.
+                    const profileFields = {
+                        displayName: user.displayName || myName || 'Player',
+                        email: user.email || null,
+                        photoURL: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'Player')}&background=0a6c3a&color=fff`,
+                        lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
+                    };
                     if (!doc.exists) {
-                        // Create new user profile
-                        userProfile = {
-                            displayName: user.displayName || myName || 'Player',
-                            email: user.email,
-                            photoURL: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'Player')}&background=0a6c3a&color=fff`,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                            lastPlayed: firebase.firestore.FieldValue.serverTimestamp(),
-                            stats: {
-                                gamesPlayed: 0,
-                                wins: 0,
-                                losses: 0,
-                                coats: 0
-                            },
-                            friendsList: []
-                        };
-                        await userRef.set(userProfile);
-                        console.log('Created new user profile');
-                    } else {
-                        userProfile = doc.data();
-                        // Update last played time
-                        await userRef.update({
-                            lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        console.log('Loaded user profile:', userProfile);
+                        profileFields.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                        profileFields.friendsList = [];
+                        // Seed the flat counters the stats code and the rules expect.
+                        Object.assign(profileFields, { gamesPlayed: 0, wins: 0, losses: 0, coats: 0 });
                     }
+                    await userRef.set(profileFields, { merge: true });
+                    userProfile = { ...(doc.exists ? doc.data() : {}), ...profileFields };
+                    console.log(doc.exists ? 'Loaded user profile' : 'Created new user profile');
                 } catch (error) {
                     console.error('Error loading user profile:', error);
                 }
@@ -3415,7 +3463,7 @@ body{
                             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                             lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
                         };
-                        await userRef.set(userStats);
+                        await userRef.set(userStats, { merge: true });
                     } else {
                         userStats = doc.data();
                     }
@@ -3606,7 +3654,7 @@ body{
                     if (isMultiplayer) {
                         POSITIONS.forEach(pos => {
                             if (lobbyPlayers[pos] && players[pos].team !== myTeam) {
-                                opponents.push(lobbyPlayers[pos].name || capitalize(pos));
+                                opponents.push(sanitizeName(lobbyPlayers[pos].name || capitalize(pos)));
                             }
                         });
                     } else {
@@ -4182,7 +4230,9 @@ body{
                 // If score is 6-6 or my team is at 6 games, and I have Ace of trump, play it immediately
                 if ((matchScores.teamRed === 6 && matchScores.teamBlue === 6) || matchScores[myTeam] === 6) {
                     const aceOfTrump = hand.find(c => c.suit === trumpSuit && c.rank === 'A');
-                    if (aceOfTrump && playableCards.includes(aceOfTrump)) {
+                    // Don't throw it away on a trick the team has already won: this block
+                    // runs before every partner-aware branch below and short-circuits them.
+                    if (aceOfTrump && playableCards.includes(aceOfTrump) && !isPartnerWinning) {
                         console.log(`ENDGAME: Playing Ace of trump to secure victory!`);
                         cardToPlay = aceOfTrump;
                     }
@@ -4197,36 +4247,37 @@ body{
 
                         // SMART SIGNALING with partner
                         if (isPartnerWinning && partnerCard) {
-                            // Partner is winning
-                            if (partnerCard.rank === 'A' || partnerCard.rank === 'K') {
+                            const isLastToPlay = currentHand.length === POSITIONS.length - 1;
+                            const partnerRuffed = partnerCard.suit === trumpSuit && ledSuit !== trumpSuit;
+
+                            if (isLastToPlay || partnerRuffed) {
+                                // Nothing left to beat the partner: from the last seat the
+                                // trick is already decided, and a ruff cannot be overtaken
+                                // by anything we could legally play of the led suit.
+                                // Overtaking here spent a trick winner for nothing.
+                                cardToPlay = playableCards[0];
+                            } else if (partnerCard.rank === 'A' || partnerCard.rank === 'K') {
                                 // Partner led HIGH card, play LOW to conserve
                                 cardToPlay = playableCards[0];
                                 console.log(`Partner led high (${partnerCard.rank}), playing low to conserve`);
                             } else if (partnerCard.value < 10) {
-                                // Partner led LOW card, try to play HIGH to help win
+                                // Partner is winning only cheaply and an opponent still has
+                                // a card to come: shore the trick up with our lowest honour.
                                 const highCards = playableCards.filter(c => c.value >= 10);
-                                if (highCards.length > 0) {
-                                    cardToPlay = highCards[0]; // Play lowest high card
-                                    console.log(`Partner led low, playing high to help win`);
-                                } else {
-                                    cardToPlay = playableCards[0];
-                                }
+                                cardToPlay = highCards.length > 0 ? highCards[0] : playableCards[0];
                             } else {
                                 // Partner led medium card, play low
                                 cardToPlay = playableCards[0];
                             }
                         } else {
-                            // Partner not winning or we're second to play
-                            const winningValue = winningEntry ? winningEntry.card.value : 0;
-
-                            // Try to win with smallest card possible
-                            let bestCard = playableCards.find(c => c.value > winningValue);
-                            if (bestCard) {
-                                cardToPlay = bestCard;
-                            } else {
-                                // Can't win, play lowest
-                                cardToPlay = playableCards[0];
-                            }
+                            // Partner not winning. Find the cheapest card that GENUINELY
+                            // wins — playableCards is sorted ascending, so the first hit
+                            // is the cheapest. Comparing bare values here used to make the
+                            // AI play an honour of the led suit "over" an opponent's ruff,
+                            // which no side-suit card can ever beat.
+                            const bestCard = playableCards.find(c =>
+                                cardBeats(c, winningEntry ? winningEntry.card : null, ledSuit, trumpSuit));
+                            cardToPlay = bestCard || playableCards[0]; // can't win: throw lowest
                         }
                     } else {
                         // --- CAN'T FOLLOW SUIT ---
@@ -4250,32 +4301,37 @@ body{
                             // COUNTER EXPECTED TRUMPS - check if opponents likely to trump
                             const opponentsLikelyVoid = checkOpponentsVoidInSuit(ledSuit, player);
 
-                            if (trumpCards.length > 0) {
-                                // Decide whether to trump
+                            // Only trumps that actually beat the current winner are worth
+                            // spending. The AI used to play its LOWEST trump unconditionally,
+                            // so when an opponent had already ruffed higher it threw a trump
+                            // under that trump — losing the trick and the trump both.
+                            const winningTrumps = trumpCards.filter(c =>
+                                cardBeats(c, winningEntry ? winningEntry.card : null, ledSuit, trumpSuit));
+
+                            if (winningTrumps.length > 0) {
                                 if (hasKingOfTrump && !aceOfTrumpPlayed) {
                                     // Be careful with King if Ace is still out
-                                    const nonKingTrumps = trumpCards.filter(c => c.rank !== 'K');
+                                    const nonKingTrumps = winningTrumps.filter(c => c.rank !== 'K');
                                     if (nonKingTrumps.length > 0) {
                                         cardToPlay = nonKingTrumps[0];
                                         console.log(`Avoiding King of trump - Ace still out there`);
                                     } else if (opponentsLikelyVoid) {
                                         // Opponents might trump anyway, use King
-                                        cardToPlay = trumpCards[0];
+                                        cardToPlay = winningTrumps[0];
                                     } else {
                                         // Walk aside rather than risk King
-                                        if (nonTrumpCards.length > 0) {
-                                            cardToPlay = nonTrumpCards[0];
-                                        } else {
-                                            cardToPlay = trumpCards[0]; // Forced
-                                        }
+                                        cardToPlay = nonTrumpCards.length > 0 ? nonTrumpCards[0] : winningTrumps[0];
                                     }
                                 } else {
-                                    // No King concerns, trump normally
-                                    cardToPlay = trumpCards[0];
+                                    // Cheapest trump that actually takes the trick
+                                    cardToPlay = winningTrumps[0];
                                 }
-                            } else {
-                                // No trump available, walk aside
+                            } else if (nonTrumpCards.length > 0) {
+                                // Cannot win: discard rather than burn a trump for nothing
                                 cardToPlay = nonTrumpCards[0];
+                            } else {
+                                // Only losing trumps left — forced, so spend the cheapest
+                                cardToPlay = trumpCards[0];
                             }
                         }
                     }
@@ -4674,6 +4730,28 @@ body{
             /**
              * Finds the winning card entry from a completed trick.
              */
+            /**
+             * Would `card` beat the trick's current winner?
+             *
+             * RANK_VALUES are suit-independent, so comparing bare `.value` across
+             * suits is meaningless: the Ace of a side suit does not beat the 2 of
+             * trump. The AI used to do exactly that, which made it burn honours on
+             * tricks an opponent had already ruffed, and undertrump into a higher
+             * trump. Every "can I win this?" decision must go through here.
+             */
+            function cardBeats(card, winningCard, ledSuit, trump) {
+                if (!winningCard) return true;              // leading an empty trick
+                const mine = card.suit === trump;
+                const theirs = winningCard.suit === trump;
+                if (mine && theirs) return card.value > winningCard.value;
+                if (mine) return true;                      // any trump beats any non-trump
+                if (theirs) return false;                   // no side suit beats a trump
+                // Neither is trump: only the led suit can win the trick at all.
+                if (card.suit !== ledSuit) return false;
+                if (winningCard.suit !== ledSuit) return true;
+                return card.value > winningCard.value;
+            }
+
             function findWinningTrickEntry(trick, trump) {
                 if (!trick || trick.length === 0) {
                     return null; // Handle empty trick
@@ -4879,7 +4957,7 @@ body{
                 const suit = getSuitSymbol(safeSuit);
                 el.innerHTML = `
                     <div class="card-rank">${rank}</div>
-                    <div class="card-suit">${parseEmojis(suit)}</div>
+                    <div class="card-suit">${suit}</div>
                     <div class="card-rank card-rank-bottom">${rank}</div>
                 `;
                 el.setAttribute('aria-label',
@@ -4985,14 +5063,48 @@ body{
                 });
             }
 
+            // Focus handling for the modal. Without it, focus stayed on whatever was
+            // behind the overlay: keyboard and screen-reader users could tab straight
+            // out of an open dialog into the game underneath.
+            let lastFocusedBeforeModal = null;
+
+            function focusableWithin(root) {
+                return [...root.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                )].filter(el => el.offsetParent !== null && !el.disabled);
+            }
+
             function showModal() {
+                lastFocusedBeforeModal = document.activeElement;
                 modalOverlay.classList.add('visible');
+                // Let the panel render before hunting for something to focus.
+                requestAnimationFrame(() => {
+                    const f = focusableWithin(modalOverlay);
+                    if (f.length) f[0].focus();
+                });
             }
 
             function hideModal() {
                 modalOverlay.classList.remove('visible');
                 modalOverlay.classList.remove('trump-select'); // NEW: Clean up just in case
+                if (lastFocusedBeforeModal && document.contains(lastFocusedBeforeModal)) {
+                    lastFocusedBeforeModal.focus();
+                }
+                lastFocusedBeforeModal = null;
             }
+
+            // Keep Tab inside the dialog while one is open.
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Tab' || !modalOverlay.classList.contains('visible')) return;
+                const f = focusableWithin(modalOverlay);
+                if (!f.length) return;
+                const first = f[0], last = f[f.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault(); last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault(); first.focus();
+                }
+            });
 
             // Escape closes the dismissible modals. Deliberately excludes trump
             // selection and game-over, where a choice is required to continue.
@@ -5189,7 +5301,12 @@ body{
              */
             function renderLobbySlot(slotEl, player, position) {
                 if (player) {
-                    const isMe = player.peerId === (peer ? peer.id : 'host');
+                    // The host's own lobby slot is stored with the literal peerId
+                    // 'host', but the host also has a real peer whose id is
+                    // 'trump-<code>' — so comparing against peer.id never matched and
+                    // the host saw neither "(You)" nor a Switch button on their seat.
+                    const myPeerId = isHost ? 'host' : (peer ? peer.id : null);
+                    const isMe = myPeerId !== null && player.peerId === myPeerId;
                     const nameSpan = `<span>${escapeHtml(sanitizeName(player.name))}${isMe ? ' (You)' : ''}</span>`;
 
                     // Show switch button if it's me and I'm not the only player
@@ -5282,6 +5399,7 @@ body{
                 resetLobby();
                 lobbyPlayers.south = { name: myName, peerId: 'host', position: 'south' };
 
+                resetPeerConnection();
                 peer = new Peer('trump-' + gameCode);
 
                 peer.on('open', (id) => {
@@ -5316,13 +5434,35 @@ body{
 
                     conn.on('close', () => {
                         console.log('Player disconnected');
-                        // Remove from lobby
+
+                        // Drop the dead connection. It was previously left in the
+                        // array for the lifetime of the session, so every later
+                        // broadcast still walked it and it kept the peer alive.
+                        connections = connections.filter(c => c !== conn);
+
+                        let seat = null;
                         for (const pos of POSITIONS) {
                             if (lobbyPlayers[pos] && lobbyPlayers[pos].peerId === conn.peer) {
+                                seat = pos;
                                 lobbyPlayers[pos] = null;
                                 break;
                             }
                         }
+
+                        if (seat && gameState !== 'INIT' && gameState !== 'GAME_OVER') {
+                            // Mid-hand: the seat still had isAI === false, so nextTurn()
+                            // sat waiting for a player who had gone and the hand froze for
+                            // everyone. Hand the seat to the AI so play continues.
+                            players[seat].isAI = true;
+                            playerNames[seat] = `${capitalize(seat)} (AI)`;
+                            updatePlayerAreaNames();
+                            updateStatusMessage(`${capitalize(seat)} disconnected — AI has taken over.`);
+                            broadcast({ type: 'playerLeft', position: seat });
+                            if (currentPlayer === seat) {
+                                gameTimeout(aiPlayCard, AI_THINK_TIME);
+                            }
+                        }
+
                         renderLobby();
                         broadcastLobbyState();
                     });
@@ -5333,6 +5473,20 @@ body{
                     lobbyStatus.textContent = 'Connection error: ' + err.type;
                     lobbyStatus.className = 'status-error';
                 });
+            }
+
+            /**
+             * Tear down any existing PeerJS session before starting a new one.
+             * Clicking Host or Join a second time used to leave the previous peer
+             * alive: its listeners stayed attached, so every inbound message was
+             * handled twice and the orphaned signalling connection was never closed.
+             */
+            function resetPeerConnection() {
+                if (peer) {
+                    try { peer.destroy(); } catch (e) { console.warn('peer teardown:', e); }
+                    peer = null;
+                }
+                connections = [];
             }
 
             /**
@@ -5356,7 +5510,7 @@ body{
                     return;
                 }
 
-                myName = joinNameInput.value.trim() || 'Player';
+                myName = sanitizeName(joinNameInput.value);
                 joinStatus.textContent = 'Connecting...';
                 joinStatus.className = 'status-waiting';
 
@@ -5364,6 +5518,7 @@ body{
                 isMultiplayer = true;
                 myPosition = 'north'; // Guest plays as North
 
+                resetPeerConnection();
                 peer = new Peer();
 
                 peer.on('open', () => {
@@ -5488,13 +5643,25 @@ body{
                         // Guest wants to switch teams (host receives this)
                         if (isHost) {
                             const player = lobbyPlayers[data.fromPos];
-                            if (player && player.peerId === data.peerId && !lobbyPlayers[data.toPos]) {
-                                lobbyPlayers[data.fromPos] = null;
-                                lobbyPlayers[data.toPos] = player;
-                                player.position = data.toPos; // Update player's position
-                                renderLobby();
-                                broadcastLobbyState();
+                            // Authenticate against the connection the message actually
+                            // arrived on, not the peerId inside it: a guest controls the
+                            // message body, so trusting data.peerId let any guest move any
+                            // other player around the lobby.
+                            if (!player || player.peerId !== conn.peer) {
+                                console.warn(`Rejected switchTeam: ${conn.peer} does not own ${data.fromPos}`);
+                                break;
                             }
+                            if (!POSITIONS.includes(data.toPos) || lobbyPlayers[data.toPos]) {
+                                // Two guests can pick the same free slot at once; the
+                                // loser used to be dropped in silence.
+                                conn.send({ type: 'error', message: 'That seat was just taken.' });
+                                break;
+                            }
+                            lobbyPlayers[data.fromPos] = null;
+                            lobbyPlayers[data.toPos] = player;
+                            player.position = data.toPos; // Update player's position
+                            renderLobby();
+                            broadcastLobbyState();
                         }
                         break;
 
@@ -5560,6 +5727,16 @@ body{
                     case 'trumpSelected':
                         if (!isHost) {
                             setTrumpFromNetwork(data.suit);
+                        }
+                        break;
+
+                    case 'playerLeft':
+                        // The host has handed a disconnected player's seat to the AI.
+                        if (!isHost && POSITIONS.includes(data.position)) {
+                            players[data.position].isAI = true;
+                            playerNames[data.position] = `${capitalize(data.position)} (AI)`;
+                            updatePlayerAreaNames();
+                            updateStatusMessage(`${capitalize(data.position)} disconnected — AI has taken over.`);
                         }
                         break;
 
@@ -5811,6 +5988,12 @@ body{
              * Set trump from network (for guest)
              */
             function setTrumpFromNetwork(suit) {
+                // A peer controls this value and it ends up in a class attribute
+                // inside innerHTML, so accept only the four real suits.
+                if (!SUITS.includes(suit)) {
+                    console.warn('Rejected trumpSelected with invalid suit:', suit);
+                    return;
+                }
                 trumpSuit = suit;
                 updateTrumpDisplay();
                 if (myPosition) {
@@ -6513,9 +6696,9 @@ body{
 
                             gameEl.innerHTML = `
                                 <div style="font-size: 0.85rem;">
-                                    <strong>${resultIcon} ${resultText}</strong> vs ${game.opponent}${specialBadge}
+                                    <strong>${resultIcon} ${resultText}</strong> vs ${escapeHtml(game.opponent)}${specialBadge}
                                 </div>
-                                <div style="font-size: 0.75rem; color: #666;">${game.score} | ${dateStr}</div>
+                                <div style="font-size: 0.75rem; color: #666;">${escapeHtml(game.score)} | ${escapeHtml(dateStr)}</div>
                             `;
                             recentGamesEl.appendChild(gameEl);
                         });
