@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// Firestore security rules for the Trump card game.
+// Deploy with:  firebase deploy --only firestore:rules
+//
+// Threat model: the client is untrusted. Anyone can open devtools and call
+// Firestore directly with their own auth token, so every write a player could
+// forge to their own advantage must be constrained here, not in the app.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function nameIsSane(name) {
+      return name is string && name.size() > 0 && name.size() <= 20;
+    }
+
+    // --- users/{uid} -------------------------------------------------------
+    // A player reads and writes only their own profile/stats document.
+    // Stats are still client-authored, so they are bounded to plausible values;
+    // making them truly tamper-proof requires writing them from Cloud Functions.
+    match /users/{userId} {
+      allow read: if signedIn();
+
+      allow create: if isOwner(userId)
+                    && nameIsSane(request.resource.data.displayName)
+                    && request.resource.data.gamesPlayed is int
+                    && request.resource.data.gamesPlayed >= 0;
+
+      allow update: if isOwner(userId)
+                    && nameIsSane(request.resource.data.displayName)
+                    // counters may only move forward, and only one game at a time
+                    && request.resource.data.gamesPlayed is int
+                    && request.resource.data.gamesPlayed >= resource.data.gamesPlayed
+                    && request.resource.data.gamesPlayed <= resource.data.gamesPlayed + 1
+                    && request.resource.data.wins >= resource.data.wins
+                    && request.resource.data.wins <= resource.data.wins + 1
+                    && request.resource.data.wins <= request.resource.data.gamesPlayed;
+
+      allow delete: if isOwner(userId);
+    }
+
+    // --- leaderboard/{uid} -------------------------------------------------
+    // World-readable; a player may only publish their own row, and the row's id
+    // must equal their uid so nobody can occupy someone else's slot.
+    match /leaderboard/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId)
+                   && nameIsSane(request.resource.data.displayName)
+                   && request.resource.data.wins is int
+                   && request.resource.data.wins >= 0
+                   && request.resource.data.gamesPlayed is int
+                   && request.resource.data.gamesPlayed >= request.resource.data.wins;
+    }
+
+    // --- gameHistory/{id} --------------------------------------------------
+    // Append-only: a player may create rows attributed to themselves and read
+    // their own history, but rows can never be edited or deleted afterwards.
+    match /gameHistory/{entryId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

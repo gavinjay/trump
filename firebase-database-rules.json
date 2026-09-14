@@ -3,42 +3,36 @@
     "matchmaking": {
       "queue": {
         "$gameMode": {
-          ".read": true,
-          "$playerId": {
-            ".write": "!data.exists() || data.child('userId').val() === auth.uid || auth != null"
+          ".read": "auth != null",
+          "$entryId": {
+            ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['userId', 'playerName', 'timestamp', 'status']) && newData.child('userId').val() === auth.uid",
+            "playerName": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "status": { ".validate": "newData.val() === 'waiting' || newData.val() === 'matched'" }
           }
         }
       }
     },
     "games": {
       "$gameId": {
-        ".read": "auth != null && (
-          data.child('players').child('south').child('userId').val() === auth.uid ||
-          data.child('players').child('north').child('userId').val() === auth.uid ||
-          data.child('players').child('east').child('userId').val() === auth.uid ||
-          data.child('players').child('west').child('userId').val() === auth.uid ||
-          data.child('players').child('south').child('userId').val().beginsWith('ai_') ||
-          data.child('players').child('north').child('userId').val().beginsWith('ai_') ||
-          data.child('players').child('east').child('userId').val().beginsWith('ai_') ||
-          data.child('players').child('west').child('userId').val().beginsWith('ai_')
-        )",
-        ".write": "auth != null && (
-          data.child('players').child('south').child('userId').val() === auth.uid ||
-          data.child('players').child('north').child('userId').val() === auth.uid ||
-          data.child('players').child('east').child('userId').val() === auth.uid ||
-          data.child('players').child('west').child('userId').val() === auth.uid ||
-          !data.exists()
-        )"
+        ".read": "auth != null && (data.child('players/south/userId').val() === auth.uid || data.child('players/north/userId').val() === auth.uid || data.child('players/east/userId').val() === auth.uid || data.child('players/west/userId').val() === auth.uid)",
+        ".write": "auth != null && (!data.exists() || data.child('players/south/userId').val() === auth.uid || data.child('players/north/userId').val() === auth.uid || data.child('players/east/userId').val() === auth.uid || data.child('players/west/userId').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['players', 'gameState'])"
       }
     },
     "invites": {
       "$userId": {
-        ".read": "$userId === auth.uid",
-        ".write": "auth != null",
+        ".read": "auth != null && $userId === auth.uid",
         "$inviteId": {
-          ".validate": "newData.hasChildren(['gameId', 'fromUserId', 'fromPlayerName', 'timestamp', 'status'])"
+          ".write": "auth != null && (newData.child('fromUserId').val() === auth.uid || $userId === auth.uid)",
+          ".validate": "newData.hasChildren(['gameId', 'fromUserId', 'fromPlayerName', 'timestamp', 'status']) && newData.child('fromUserId').val() === auth.uid",
+          "fromPlayerName": { ".validate": "newData.isString() && newData.val().length <= 20" }
         }
       }
+    },
+    "$other": {
+      ".read": false,
+      ".write": false
     }
   }
 }

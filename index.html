@@ -1844,24 +1844,39 @@
             let auth, db, rtdb;
             let firebaseEnabled = false;
 
-            try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
+            // initializeApp() happily accepts placeholder credentials and only
+            // fails later on the first network call, so detect the placeholders
+            // up front rather than relying on a try/catch that never fires.
+            const firebaseConfigured =
+                typeof firebase !== 'undefined' &&
+                Object.values(firebaseConfig).every(v => typeof v === 'string' && v && !v.includes('YOUR_'));
+
+            if (firebaseConfigured) {
+                try {
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(firebaseConfig);
+                    }
+                    auth = firebase.auth();
+                    db = firebase.firestore();
+                    rtdb = firebase.database();
+                    firebaseEnabled = true;
+                    console.log('Firebase initialized successfully');
+                } catch (error) {
+                    console.warn('Firebase failed to initialize - guest mode only:', error);
+                    firebaseEnabled = false;
                 }
-                auth = firebase.auth();
-                db = firebase.firestore();
-                rtdb = firebase.database();
-                firebaseEnabled = true;
-                console.log('Firebase initialized successfully');
-            } catch (error) {
-                console.warn('Firebase not configured - app will work in guest mode only:', error);
-                firebaseEnabled = false;
+            } else {
+                console.info('Firebase not configured - running in guest mode. ' +
+                    'Add your project credentials to firebaseConfig to enable accounts, stats and leaderboards.');
             }
 
             // Current user state
             let currentUser = null;
             let userProfile = null;
             let isAnonymous = false;
+            // Declared here so reads before the first Firestore load return null
+            // instead of throwing ReferenceError and killing the stats UI.
+            let userStats = null;
 
             // Set up authentication state listener
             if (firebaseEnabled) {
@@ -2579,6 +2594,7 @@
              */
             function initMatch() {
                 console.log("Initializing new match...");
+                clearGameTimers(); // drop any continuations left over from a previous match
                 matchScores = { teamRed: 0, teamBlue: 0 }; // Reset match scores
                 trumpCaller = 'south'; // South calls trump first
                 gameState = 'TRUMP_SELECTION'; // Start with trump selection
@@ -2652,7 +2668,7 @@
                 }
 
                 // 2. Go to trump selection
-                setTimeout(() => {
+                gameTimeout(() => {
                     promptForTrump();
                 }, 500);
             }
@@ -2677,11 +2693,9 @@
                         // Alternate between south and north for Team Red
                         trumpCaller = (trumpCaller === 'south') ? 'north' : 'south';
                     } else {
-                        // Alternate between east and west for Team Blue
-                        trumpCaller = (trumpCaller === 'east' || trumpCaller === 'south' || trumpCaller === 'north') ? 'east' : 'west';
-                        if (trumpCaller !== 'east' && trumpCaller !== 'west') {
-                            trumpCaller = 'east';
-                        }
+                        // Alternate between east and west for Team Blue.
+                        // Coming from a Team Red caller (south/north) we start at east.
+                        trumpCaller = (trumpCaller === 'east') ? 'west' : 'east';
                     }
                 }
                 // If isRedeal is true, trumpCaller stays the same
@@ -2750,7 +2764,7 @@
                 }
 
                 // 2. Go to trump selection
-                setTimeout(() => {
+                gameTimeout(() => {
                     promptForTrump();
                 }, 500);
             }
@@ -2843,7 +2857,7 @@
                     modalOverlay.classList.add('trump-select'); // NEW: Special class
                 } else if (players[currentPlayer].isAI) {
                     // AI selects trump
-                    setTimeout(() => {
+                    gameTimeout(() => {
                         const aiHand = players[currentPlayer].hand;
                         const chosenSuit = aiSelectTrump(aiHand);
                         setTrump(chosenSuit);
@@ -2932,7 +2946,7 @@
                     specialEventMessage.style.color = teamColor;
                     showSpecialEventMessage(`${teamName}\nNO TRUMPS\nRE-DEAL!`, 2000);
 
-                    setTimeout(() => {
+                    gameTimeout(() => {
                         specialEventMessage.style.color = 'var(--highlight-player)';
                         // Restart the hand with same trump caller
                         if (isMultiplayer && isHost) {
@@ -2952,7 +2966,7 @@
                     sendGameState();
                 }
 
-                setTimeout(() => {
+                gameTimeout(() => {
                     updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. ${capitalize(handLeader)} starts.`);
                     nextTurn();
                 }, 1000);
@@ -2967,14 +2981,14 @@
                 console.log(`Turn: ${currentPlayer}`);
                 highlightActivePlayer(currentPlayer);
 
-                // NEW: Check for guaranteed win before allowing play
-                const guaranteedWin = checkGuaranteedWin(currentPlayer);
-                if (guaranteedWin) {
-                    console.log(`${currentPlayer} has guaranteed winning cards!`);
-                    updateStatusMessage(`${capitalize(currentPlayer)} has guaranteed winning cards! Auto-playing...`);
-                    setTimeout(() => autoPlayGuaranteedWin(currentPlayer, guaranteedWin), 1000);
-                    return;
-                }
+                // The "guaranteed win" auto-play that used to run here was removed:
+                // it decided by reading every opponent's hidden hand, it ran before
+                // the human check below so it played the human's cards for them, it
+                // called playCard() directly and so bypassed the follow-suit gate,
+                // and it chained on a fixed 3s timer with no turn check — which
+                // played cards out of turn and eventually hung the hand.
+                // Any replacement must use only public information (playedCards),
+                // trigger only on lead, and validate against getPlayableCards().
 
                 // Check if current player is human
                 const isHumanTurn = !players[currentPlayer].isAI;
@@ -2994,7 +3008,7 @@
                 } else {
                     // AI player's turn
                     updateStatusMessage(`${capitalize(currentPlayer)}'s turn...`);
-                    setTimeout(aiPlayCard, AI_THINK_TIME);
+                    gameTimeout(aiPlayCard, AI_THINK_TIME);
                 }
             }
 
@@ -3192,124 +3206,6 @@
                 return safeSuits;
             }
 
-            /**
-             * NEW: Check if a player has guaranteed winning cards
-             * Returns an array of cards that guarantee winning, or null if none
-             */
-            function checkGuaranteedWin(player) {
-                const team = players[player].team;
-                const tricksNeeded = 7 - handTrickCounts[team];
-
-                // If already won or need more than hand size, no auto-play
-                if (tricksNeeded <= 0 || tricksNeeded > players[player].hand.length) {
-                    return null;
-                }
-
-                // Get all trump cards in player's hand, sorted high to low
-                const playerTrumps = players[player].hand
-                    .filter(c => c.suit === trumpSuit)
-                    .sort((a, b) => b.value - a.value);
-
-                // If player doesn't have enough trumps for remaining tricks needed
-                if (playerTrumps.length < tricksNeeded) {
-                    return null;
-                }
-
-                // Find all trump cards still in play (not in current trick, not played yet)
-                const playedTrumpIds = new Set();
-                currentHand.forEach(entry => {
-                    if (entry.card.suit === trumpSuit) {
-                        playedTrumpIds.add(entry.card.id);
-                    }
-                });
-
-                // Get all trump cards in other players' hands
-                const otherTrumps = [];
-                for (const pos of POSITIONS) {
-                    if (pos !== player) {
-                        const otherPlayerTrumps = players[pos].hand.filter(c =>
-                            c.suit === trumpSuit && !playedTrumpIds.has(c.id)
-                        );
-                        otherTrumps.push(...otherPlayerTrumps);
-                    }
-                }
-
-                // Sort other trumps by value, high to low
-                otherTrumps.sort((a, b) => b.value - a.value);
-
-                // Check if player's top N trumps beat all other trumps
-                const guaranteedCards = [];
-                for (let i = 0; i < tricksNeeded && i < playerTrumps.length; i++) {
-                    const myTrump = playerTrumps[i];
-
-                    // Check if this trump beats all remaining trumps in other hands
-                    let beatsAll = true;
-                    for (const otherTrump of otherTrumps) {
-                        if (otherTrump.value >= myTrump.value) {
-                            beatsAll = false;
-                            break;
-                        }
-                    }
-
-                    if (beatsAll) {
-                        guaranteedCards.push(myTrump);
-                    } else {
-                        // If this card doesn't guarantee a win, we can't guarantee the rest either
-                        break;
-                    }
-                }
-
-                // Return guaranteed cards only if we have enough to win
-                if (guaranteedCards.length >= tricksNeeded) {
-                    return guaranteedCards.slice(0, tricksNeeded);
-                }
-
-                return null;
-            }
-
-            /**
-             * NEW: Auto-play guaranteed winning cards
-             */
-            function autoPlayGuaranteedWin(player, guaranteedCards) {
-                let cardIndex = 0;
-
-                function playNextCard() {
-                    if (cardIndex >= guaranteedCards.length || gameState === 'HAND_OVER' || gameState === 'GAME_OVER') {
-                        return; // Stop if we've played all cards or game ended
-                    }
-
-                    const card = guaranteedCards[cardIndex];
-
-                    // Find and remove the card from player's hand
-                    const hand = players[player].hand;
-                    const handIndex = hand.findIndex(c => c.id === card.id);
-                    if (handIndex === -1) {
-                        console.error(`Card ${card.id} not found in ${player}'s hand!`);
-                        return;
-                    }
-                    const cardToPlay = hand.splice(handIndex, 1)[0];
-
-                    // Play the card
-                    if (isMultiplayer && !isHost && player === myPosition) {
-                        // Guest sends to host
-                        broadcast({ type: 'cardPlayed', player: player, card: cardToPlay });
-                        renderGuestHands();
-                    } else {
-                        playCard(player, cardToPlay);
-                    }
-
-                    cardIndex++;
-
-                    // Schedule next card after current trick completes
-                    // Wait for trick to end and new turn to start
-                    if (cardIndex < guaranteedCards.length) {
-                        setTimeout(playNextCard, AI_THINK_TIME * 3);
-                    }
-                }
-
-                // Start playing
-                playNextCard();
-            }
 
             /**
              * Processes a card being played by any player.
@@ -3367,7 +3263,7 @@
                         showSpecialEventMessage(`ACE CATCH KING!\n${winnerName} wins!`);
 
                         // Delay the game-over modal to let the message be seen
-                        setTimeout(() => {
+                        gameTimeout(() => {
                             showGameOver(winnerTeam, "Ace Catch King!");
                         }, 2800);
                         // --- END NEW ---
@@ -3381,7 +3277,7 @@
                 if (currentHand.length === 4) {
                     gameState = 'TRICK_OVER';
                     highlightActivePlayer(null);
-                    setTimeout(endTrick, AI_THINK_TIME * 1.5); // Pause to see cards
+                    gameTimeout(endTrick, AI_THINK_TIME * 1.5); // Pause to see cards
                 } else {
                     gameState = 'PLAYING';
                     currentPlayer = getNextPlayer(player);
@@ -3415,7 +3311,7 @@
                 console.log(`Showing TAKES THE HAND animation for ${winnerName}`);
                 showSpecialEventMessage(`${winnerName}\nTAKES THE HAND!`, 600); // Fast animation (doubled speed)
                 
-                setTimeout(() => {
+                gameTimeout(() => {
                     specialEventMessage.style.color = 'var(--highlight-player)';
                 }, 600);
 
@@ -3428,13 +3324,13 @@
                     updateStatusMessage(`${capitalize(winnerTeam)} wins the round!`); // UPDATED: hand -> round
 
                     // Call endHand, but force the winner
-                    setTimeout(() => endHand(winnerTeam), AI_THINK_TIME * 2); // Pass winner
+                    gameTimeout(() => endHand(winnerTeam), AI_THINK_TIME * 2); // Pass winner
                     return; // Don't continue to clear trick or start next turn
                 }
                 // --- End new check ---
 
                 // Clear trick area after a delay
-                setTimeout(() => {
+                gameTimeout(() => {
                     currentHand = [];
                     clearTrickArea();
 
@@ -3499,42 +3395,42 @@
                     const loserScore = matchWinner === 'teamRed' ? matchScores.teamBlue : matchScores.teamRed;
 
                     // NEW: Reveal all cards before showing match winner message
-                    setTimeout(() => {
+                    gameTimeout(() => {
                         revealAllCards(2500); // Show cards for 2.5 seconds
                     }, 2000);
 
                     // Show "TAKES THE MATCH!" animation after cards are revealed
-                    setTimeout(() => {
+                    gameTimeout(() => {
                         showSpecialEventMessage(`${winnerName}\nTAKES THE MATCH!`, 2000);
                     }, 4700); // 2000 (game animation) + 2500 (card reveal) + 200 (buffer)
 
                     // Reset color after animations
-                    setTimeout(() => {
+                    gameTimeout(() => {
                         specialEventMessage.style.color = 'var(--highlight-player)';
                     }, 6700);
 
                     // Check for COAT (7-0 victory)
                     if (loserScore === 0) {
                         const winnerNameFull = matchWinner === 'teamRed' ? 'Team Red' : 'Team Blue';
-                        setTimeout(() => {
+                        gameTimeout(() => {
                             showSpecialEventMessage(`COAT!\n${winnerNameFull} wins 7-0!`);
                         }, 6900);
-                        setTimeout(() => {
+                        gameTimeout(() => {
                             showGameOver(matchWinner, "COAT! (7-0)");
                         }, 9900);
                     } else {
-                        setTimeout(() => {
+                        gameTimeout(() => {
                             showGameOver(matchWinner, "Reached 7 games!");
                         }, 6900);
                     }
                 } else {
                     // Reset color after animation
-                    setTimeout(() => {
+                    gameTimeout(() => {
                         specialEventMessage.style.color = 'var(--highlight-player)';
                     }, 1800);
 
                     // Start next hand - winning team picks trump
-                    setTimeout(() => startNewHand(handWinner), 2000); // Pause before next hand
+                    gameTimeout(() => startNewHand(handWinner), 2000); // Pause before next hand
                 }
             }
 
@@ -3564,7 +3460,7 @@
                 showSpecialEventMessage(`${winnerName.toUpperCase()}\nWINS!`);
 
                 // Show Play Again button after animation (no modal popup)
-                setTimeout(() => {
+                gameTimeout(() => {
                     // Update button text and state for multiplayer
                     if (isMultiplayer) {
                         if (isHost) {
@@ -3675,7 +3571,51 @@
             }
 
             /**
-             * Parse emojis in text or element using Twemoji
+             * Game-flow timers, tracked so that leaving a game can cancel every
+             * pending continuation. Without this, backToMenu() returns to the menu
+             * while ~29 timers are still queued, and the abandoned game keeps
+             * advancing itself into the next one.
+             */
+            let gameTimers = [];
+
+            function gameTimeout(fn, ms) {
+                const id = setTimeout(() => {
+                    gameTimers = gameTimers.filter(t => t !== id);
+                    fn();
+                }, ms);
+                gameTimers.push(id);
+                return id;
+            }
+
+            function clearGameTimers() {
+                gameTimers.forEach(clearTimeout);
+                gameTimers = [];
+            }
+
+            /**
+             * Escape a value for safe interpolation into an HTML string.
+             * Every value that originates from a peer, a URL, or Firestore MUST
+             * go through this before it reaches innerHTML.
+             */
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                })[ch]);
+            }
+
+            /**
+             * Sanitise a peer-supplied display name: strip markup, collapse
+             * whitespace, and cap the length so a long name can't break layout.
+             */
+            function sanitizeName(name) {
+                const clean = String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 20);
+                return clean || 'Player';
+            }
+
+            /**
+             * Parse emojis in text or element using Twemoji.
+             * NOTE: twemoji.parse does NOT escape HTML, so any untrusted string
+             * must be escaped before being passed here.
              */
             function parseEmojis(input) {
                 if (typeof twemoji === 'undefined') {
@@ -4038,7 +3978,7 @@
             function renderLobbySlot(slotEl, player, position) {
                 if (player) {
                     const isMe = player.peerId === (peer ? peer.id : 'host');
-                    const nameSpan = `<span>${player.name}${isMe ? ' (You)' : ''}</span>`;
+                    const nameSpan = `<span>${escapeHtml(sanitizeName(player.name))}${isMe ? ' (You)' : ''}</span>`;
 
                     // Show switch button if it's me and I'm not the only player
                     let switchBtn = '';
@@ -4114,7 +4054,7 @@
              * Host a game - show lobby
              */
             function showHostView() {
-                myName = nameInput.value.trim() || 'Player';
+                myName = sanitizeName(nameInput.value);
                 gameCode = generateGameCode();
                 gameCodeDisplay.textContent = gameCode;
 
@@ -4365,14 +4305,40 @@
                     case 'cardPlayed':
                         // A card was played (from guest to host, or host broadcasting)
                         if (isHost) {
-                            // Host receives guest's play, remove card from player's hand first
-                            const playerHand = players[data.player].hand;
-                            const cardIndex = playerHand.findIndex(c => c.id === data.card.id);
-                            if (cardIndex !== -1) {
-                                playerHand.splice(cardIndex, 1);
+                            // The host is the authority. A guest can put anything on the
+                            // wire, so validate the seat it claims, that it is that seat's
+                            // turn, that it actually holds the card, and that the card is
+                            // legal to play — then play the host's own copy, never theirs.
+                            const claimed = data.player;
+                            const seat = POSITIONS.find(pos =>
+                                lobbyPlayers[pos] && lobbyPlayers[pos].peerId === conn.peer);
+
+                            if (!seat || seat !== claimed) {
+                                console.warn(`Rejected cardPlayed: ${conn.peer} claimed seat "${claimed}" but owns "${seat}"`);
+                                break;
                             }
-                            // Then process the play
-                            playCard(data.player, data.card);
+                            if (gameState !== 'PLAYING' || currentPlayer !== seat) {
+                                console.warn(`Rejected cardPlayed from ${seat}: not their turn`);
+                                break;
+                            }
+
+                            const playerHand = players[seat].hand;
+                            const cardIndex = playerHand.findIndex(c => c.id === data.card?.id);
+                            if (cardIndex === -1) {
+                                console.warn(`Rejected cardPlayed from ${seat}: card not in hand`);
+                                break;
+                            }
+
+                            const ownCard = playerHand[cardIndex];
+                            const ledSuit = currentHand.length > 0 ? currentHand[0].card.suit : null;
+                            const legal = getPlayableCards(playerHand, ledSuit);
+                            if (!legal.some(c => c.id === ownCard.id)) {
+                                console.warn(`Rejected cardPlayed from ${seat}: must follow ${ledSuit}`);
+                                break;
+                            }
+
+                            playerHand.splice(cardIndex, 1);
+                            playCard(seat, ownCard);
                         } else {
                             // Guest receives broadcast of plays
                             playCardFromNetwork(data.player, data.card);
@@ -4453,7 +4419,8 @@
              * Receive full game state (for guest)
              */
             function receiveGameState(state) {
-                deck = state.deck;
+                // Guests never deal, so they only track how many cards are left.
+                deck = new Array(state.deckCount || 0).fill(null);
                 matchScores = state.matchScores;
                 currentHand = state.currentHand;
                 trumpSuit = state.trumpSuit;
@@ -4542,7 +4509,10 @@
                     if (!guestPosition) return;
 
                     const state = {
-                        deck: deck,
+                        // Only the COUNT of undealt cards goes on the wire. Sending the
+                        // deck itself handed every guest their opponents' future cards —
+                        // during trump selection that is 47 of the 52 cards.
+                        deckCount: deck.length,
                         matchScores: matchScores,
                         currentHand: currentHand,
                         trumpSuit: trumpSuit,
@@ -4737,6 +4707,10 @@
              * Reset to main menu
              */
             function backToMenu() {
+                // Cancel every queued game continuation before tearing down, or the
+                // abandoned game keeps advancing itself on top of the next one.
+                clearGameTimers();
+
                 // Clean up peer connections
                 if (peer) {
                     peer.destroy();
@@ -4928,7 +4902,7 @@
 
             // Play vs AI button
             document.getElementById('play-ai-btn').addEventListener('click', () => {
-                myName = nameInput.value.trim() || 'Player';
+                myName = sanitizeName(nameInput.value);
                 playerNames.south = myName;
                 isMultiplayer = false;
                 isHost = false;
@@ -5346,10 +5320,10 @@
 
                         entryEl.innerHTML = `
                             <div style="text-align: center;">${rankDisplay}</div>
-                            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${entry.displayName}${isCurrentUser ? ' (You)' : ''}</div>
-                            <div style="text-align: center;">${entry.wins}</div>
-                            <div style="text-align: center;">${entry.gamesPlayed}</div>
-                            <div style="text-align: center;">${entry.winRate}%</div>
+                            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(sanitizeName(entry.displayName))}${isCurrentUser ? ' (You)' : ''}</div>
+                            <div style="text-align: center;">${Number(entry.wins) || 0}</div>
+                            <div style="text-align: center;">${Number(entry.gamesPlayed) || 0}</div>
+                            <div style="text-align: center;">${Number(entry.winRate) || 0}%</div>
                         `;
 
                         leaderboardList.appendChild(entryEl);
@@ -5478,9 +5452,17 @@
                 }
             }
 
+            // The only reactions that may ever be rendered. A peer can send
+            // anything, so an inbound reaction is matched against this set and
+            // dropped if it isn't one of ours.
+            const ALLOWED_REACTIONS = ['❤️', '👍', '👎', '😂', '😭', '🖕', '😠'];
+
             function showReaction(position, emoji) {
+                if (!ALLOWED_REACTIONS.includes(emoji)) return;
+                if (!POSITIONS.includes(position)) return;
                 const visualPos = getVisualPosition(position);
                 const reactionEl = document.getElementById(`reaction-${visualPos}`);
+                if (!reactionEl) return;
                 reactionEl.innerHTML = parseEmojis(emoji);
                 reactionEl.style.display = 'block';
 
