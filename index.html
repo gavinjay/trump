@@ -2775,6 +2775,33 @@ body{
             #player-hand-south .card { animation: none !important; }
         }
 
+
+        /* The status line is a real button now (it opens the match history), but it
+           must still read as the quiet status text it has always been. */
+        #status-message {
+            appearance: none;
+            -webkit-appearance: none;
+            background: none;
+            border: 0;
+            padding: 0;
+            margin: 0;
+            font: inherit;
+            color: inherit;
+            text-align: right;
+            cursor: pointer;
+            min-height: 44px;        /* tap target */
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        #status-message::after {
+            content: '\2026';       /* a quiet hint that there is more behind it */
+            margin-left: 6px;
+            opacity: .5;
+            font-size: .85em;
+        }
+        #status-message:active { opacity: .7; }
+
     </style>
 </head>
 <body>
@@ -2798,7 +2825,7 @@ body{
                 <span id="game-score">Games: <span class="sr-only">Red </span><span id="game-score-red" class="team-red-text">0</span> <span aria-hidden="true">-</span> <span class="sr-only">Blue </span><span id="game-score-blue" class="team-blue-text">0</span></span>
                 <span id="hand-score">Hands: <span class="sr-only">Red </span><span id="hand-score-red" class="team-red-text">0</span> <span aria-hidden="true">-</span> <span class="sr-only">Blue </span><span id="hand-score-blue" class="team-blue-text">0</span></span>
             </div>
-            <div id="status-message" role="status" aria-live="polite" aria-atomic="true">Starting new game...</div>
+            <button id="status-message" type="button" role="status" aria-live="polite" aria-atomic="true" aria-label="Match history" title="Tap for the full match history">Starting new game...</button>
         </div>
 
         <!-- Main Game Table -->
@@ -3101,6 +3128,16 @@ body{
             </div>
 
             <!-- Player Stats Modal -->
+            <div id="match-log-modal" class="modal-content" style="display: none; max-width: 480px; text-align: left;">
+                <h2 style="margin-bottom: 6px;">Match History</h2>
+                <p style="font-size:0.8rem;color:#666;margin:0 0 12px;">
+                    <span id="match-log-count">0</span> events, newest first
+                </p>
+                <div id="match-log-list" style="max-height: 52vh; overflow-y: auto; overscroll-behavior: contain;
+                     background: rgba(0,0,0,.035); border-radius: 8px; padding: 4px 6px;"></div>
+                <button class="menu-btn menu-btn-primary" id="close-match-log-btn" style="margin-top: 14px;">Close</button>
+            </div>
+
             <div id="stats-modal" class="modal-content" style="display: none; max-width: 500px; text-align: left;">
                 <h2 style="text-align: center; margin-bottom: 20px;">Your Statistics</h2>
                 <div id="stats-loading" style="text-align: center; padding: 20px;">Loading stats...</div>
@@ -3921,6 +3958,11 @@ body{
             // userStats). Declared with a valid initial shape.
             let handTrickCounts = { teamRed: 0, teamBlue: 0 };
 
+            // Trump may not be LED until it has been broken — that is, until someone
+            // has been unable to follow suit and ruffed. Reset at the start of every
+            // hand. Without this a player could open the very first trick with trump.
+            let trumpBroken = false;
+
             // Track game outcome for stats
             let gameStartTeam = null;
             let wasAceKingTriggered = false;
@@ -3995,6 +4037,7 @@ body{
                 console.log("Initializing new match...");
                 clearGameTimers(); // drop any continuations left over from a previous match
                 assignAINames();   // fresh opponents for a fresh match
+                matchLog = [];     // a new match starts a new history
                 matchScores = { teamRed: 0, teamBlue: 0 }; // Reset match scores
                 trumpCaller = 'south'; // South calls trump first
                 gameState = 'TRUMP_SELECTION'; // Start with trump selection
@@ -4028,6 +4071,7 @@ body{
                 };
                 currentHand = [];
                 handTrickCounts = { teamRed: 0, teamBlue: 0 };
+                trumpBroken = false; // trump is closed again each hand
 
                 // Initialize advanced AI tracking
                 playerVoids = {
@@ -4124,6 +4168,7 @@ body{
                 // Reset trick data
                 currentHand = [];
                 handTrickCounts = { teamRed: 0, teamBlue: 0 };
+                trumpBroken = false; // trump is closed again each hand
 
                 // Reset advanced AI tracking
                 playerVoids = {
@@ -4372,6 +4417,7 @@ body{
 
                 gameTimeout(() => {
                     updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. ${capitalize(handLeader)} starts.`);
+                logMatchEvent(`Trump is ${trumpSuit} \u2014 called by ${playerNames[trumpCaller] || trumpCaller}`, 'hand');
                     nextTurn();
                 }, 1000);
             }
@@ -4562,8 +4608,11 @@ body{
                     }
                 } else if (!cardToPlay) {
                     // --- LEADING THE TRICK ---
-                    const trumpCards = hand.filter(c => c.suit === trumpSuit);
-                    const nonTrumps = hand.filter(c => c.suit !== trumpSuit);
+                    // Choose from playableCards, not the raw hand: when trump has not
+                    // been broken yet getPlayableCards has already removed the trumps,
+                    // so the AI cannot open a trick with one either.
+                    const trumpCards = playableCards.filter(c => c.suit === trumpSuit);
+                    const nonTrumps = playableCards.filter(c => c.suit !== trumpSuit);
 
                     // AVOID LEADING SUITS OPPONENTS DON'T HAVE
                     const safeSuits = findSafeSuitsToLead(player);
@@ -4663,6 +4712,12 @@ body{
                 // Track played card
                 playedCards.push(card);
 
+                // Any trump on the table opens the suit for the rest of the hand.
+                if (card.suit === trumpSuit) {
+                    if (!trumpBroken) console.log('Trump is broken.');
+                    trumpBroken = true;
+                }
+
                 // Track player voids - if they didn't follow suit, they're void in that suit
                 if (currentHand.length > 1) {
                     const ledSuit = currentHand[0].card.suit;
@@ -4744,6 +4799,7 @@ body{
 
                 console.log(`Trick over. Winner: ${winner} (${winnerTeam}).`);
                 updateStatusMessage(`${capitalize(winner)} wins the hand!`); // UPDATED: trick -> hand
+                logMatchEvent(`${playerNames[winner] || capitalize(winner)} takes the trick`, 'trick');
                 updateHandScoreDisplay(); // NEW
 
                 // Sweep the won trick toward whoever took it. The class drives a
@@ -4829,6 +4885,7 @@ body{
 
                 console.log(message);
                 updateStatusMessage(message);
+                logMatchEvent(message, 'hand');
                 updateScoreDisplay();
 
                 const winnerName = handWinner === 'teamRed' ? 'RED' : 'BLUE';
@@ -4889,6 +4946,7 @@ body{
              */
             function showGameOver(winningTeam, message) {
                 console.log(`Game Over. Winner: ${winningTeam}. Message: ${message}`);
+                logMatchEvent(`Match over \u2014 ${winningTeam === 'teamRed' ? 'Team Red' : 'Team Blue'} wins. ${message}`, 'game');
                 gameState = 'GAME_OVER';
 
                 // The host drives endHand/showGameOver locally; nothing told the
@@ -4954,8 +5012,13 @@ body{
             function getPlayableCards(hand, ledSuit) {
                 let playable = [];
                 if (!ledSuit) {
-                    // Leading, all cards are playable
-                    playable = [...hand];
+                    // Leading. Trump cannot be led until it has been broken; if the
+                    // hand is nothing but trump then leading it is forced and legal.
+                    // This is the single gate the human's highlighting, the AI and
+                    // the host's validation of guest moves all go through, so the
+                    // rule lands in all three at once.
+                    const nonTrumps = hand.filter(c => c.suit !== trumpSuit);
+                    playable = (!trumpBroken && nonTrumps.length > 0) ? nonTrumps : [...hand];
                 } else {
                     // Must follow suit
                     const cardsOfLedSuit = hand.filter(c => c.suit === ledSuit);
@@ -5275,6 +5338,40 @@ body{
 
             function updateStatusMessage(msg) {
                 statusBar.message.textContent = msg;
+            }
+
+            // --- MATCH LOG ---------------------------------------------------
+            // The status line only ever shows the latest thing that happened, so
+            // the run of play was unrecoverable. Notable events are recorded here
+            // and the status line opens the full history.
+            let matchLog = [];
+
+            function logMatchEvent(text, kind = 'info') {
+                matchLog.push({
+                    text: String(text),
+                    kind,
+                    hand: matchScores.teamRed + matchScores.teamBlue + 1,
+                    trick: handTrickCounts.teamRed + handTrickCounts.teamBlue + 1
+                });
+                if (matchLog.length > 400) matchLog.shift();
+                const el = document.getElementById('match-log-count');
+                if (el) el.textContent = matchLog.length;
+            }
+
+            function renderMatchLog() {
+                const listEl = document.getElementById('match-log-list');
+                if (!listEl) return;
+                if (matchLog.length === 0) {
+                    listEl.innerHTML = '<p style="color:#666;text-align:center;">Nothing has happened yet.</p>';
+                    return;
+                }
+                const colour = { trick: '#0b6b3f', hand: '#8a5a12', game: '#7a1f2b', info: '#555' };
+                listEl.innerHTML = matchLog.slice().reverse().map(e => `
+                    <div style="display:grid;grid-template-columns:54px 1fr;gap:10px;padding:7px 8px;
+                                border-bottom:1px solid rgba(0,0,0,.08);font-size:0.82rem;align-items:baseline;">
+                        <span style="color:#888;font-variant-numeric:tabular-nums;">H${e.hand}·T${e.trick}</span>
+                        <span style="color:${colour[e.kind] || colour.info};">${escapeHtml(e.text)}</span>
+                    </div>`).join('');
             }
 
             function updateScoreDisplay() {
@@ -5979,6 +6076,7 @@ body{
                         // Host triggered a redeal due to no trumps
                         if (!isHost) {
                             updateStatusMessage("Redealing due to no trumps...");
+                    logMatchEvent('Redeal \u2014 a player held no trumps', 'info');
                         }
                         break;
 
@@ -6466,6 +6564,42 @@ body{
                 } else {
                     // Single player
                     initMatch();
+                }
+            });
+
+            // --- MATCH LOG ---
+            // The overlay is a flex row, so any sibling modal left visible would sit
+            // BESIDE the history rather than behind it — which is exactly what
+            // happened when the history was opened during trump selection. Hide
+            // whatever was showing, then put it back on close so a pending choice
+            // (trump selection, game over) is not lost.
+            let modalShownBeforeLog = null;
+
+            document.getElementById('status-message').addEventListener('click', () => {
+                const overlay = document.getElementById('modal-overlay');
+                // A dismissed modal keeps display:block — the overlay's .visible class
+                // is what actually shows it. So only treat a panel as "was open" when
+                // the overlay itself was visible; otherwise closing the history would
+                // resurrect a stale dialog (the trump prompt, for one).
+                const overlayWasVisible = overlay.classList.contains('visible');
+                const shown = [...overlay.querySelectorAll('.modal-content')]
+                    .find(m => m.style.display === 'block') || null;
+                if (shown) shown.style.display = 'none';
+                modalShownBeforeLog = overlayWasVisible ? shown : null;
+
+                renderMatchLog();
+                document.getElementById('match-log-modal').style.display = 'block';
+                showModal();
+            });
+
+            document.getElementById('close-match-log-btn').addEventListener('click', () => {
+                document.getElementById('match-log-modal').style.display = 'none';
+                if (modalShownBeforeLog) {
+                    // Something was waiting on the player — give it back.
+                    modalShownBeforeLog.style.display = 'block';
+                    modalShownBeforeLog = null;
+                } else {
+                    hideModal();
                 }
             });
 
