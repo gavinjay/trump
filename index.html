@@ -2640,6 +2640,141 @@ body{
             #modal-overlay.trump-select .modal-content { margin-top: 4vh; }
         }
 
+
+        /* ============================================================
+           FEEDBACK PASS — from playing the game on a phone.
+           ============================================================ */
+
+        /* (2) The hand lifted an arbitrary card after you had already played.
+           .card:hover applied to ANY card, playable or not, and on a touch screen
+           the hover state sticks to whatever the finger last covered — so after a
+           card left the hand and it re-rendered, some unrelated card sat raised.
+           Hover lifts are now only for real pointers; touch gets :active instead. */
+        @media (hover: none), (pointer: coarse) {
+            #player-hand-south .card:hover,
+            #player-hand-south .card.playable:hover {
+                translate: 0 -6px;          /* match .playable resting lift */
+                scale: 1;
+                z-index: auto !important;
+            }
+            #player-hand-south .card.disabled:hover {
+                translate: 0 0;
+                scale: 1;
+            }
+        }
+
+        /* (5) Back to a standard two-colour deck. The four-colour deck was mine,
+           not the game's convention — spades/clubs black, hearts/diamonds red. */
+        :root {
+            --suit-spade:   #16181d;
+            --suit-club:    #16181d;
+            --suit-heart:   #c0202f;
+            --suit-diamond: #c0202f;
+        }
+
+        /* (11) No more translucent disc in the middle — cards land on the felt. */
+        #trick-area::before { content: none !important; }
+
+        /* (1) Carbon-fibre card backs: a woven 2x2 twill built from four repeating
+           gradients on a dark ground, with a soft sheen across the weave and a
+           thin bevel so the card still reads as a physical object. */
+        .card-back {
+            --cf: 6px;                       /* weave cell */
+            background-color: #15181c;
+            background-image:
+                linear-gradient(  27deg, rgba(255,255,255,.058) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.058) 87.5%),
+                linear-gradient( -27deg, rgba(255,255,255,.058) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.058) 87.5%),
+                linear-gradient(  27deg, rgba(255,255,255,.058) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.058) 87.5%),
+                linear-gradient( -27deg, rgba(255,255,255,.058) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.058) 87.5%),
+                linear-gradient(135deg, #22262c 0%, #14171b 38%, #0e1114 62%, #1c2026 100%),
+                radial-gradient(120% 90% at 22% 8%, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 55%);
+            background-size:
+                calc(var(--cf) * 2) calc(var(--cf) * 2),
+                calc(var(--cf) * 2) calc(var(--cf) * 2),
+                calc(var(--cf) * 2) calc(var(--cf) * 2),
+                calc(var(--cf) * 2) calc(var(--cf) * 2),
+                100% 100%, 100% 100%;
+            background-position:
+                0 0,
+                0 0,
+                var(--cf) var(--cf),
+                var(--cf) var(--cf),
+                0 0, 0 0;
+            border: 1px solid #0a0c0e;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.14),
+                inset 0 -1px 0 rgba(0,0,0,.55),
+                var(--lift-rest);
+        }
+        /* Kill the old brass medallion the previous back drew. */
+        .card-back::before,
+        .card-back::after { content: none !important; }
+
+
+        /* (4) Reactions render on the seat's own button. The old corner bubble is
+           retired — nothing writes to it any more, but hide it so nothing can. */
+        .player-reaction { display: none !important; }
+
+        .reaction-btn.reacting {
+            background: radial-gradient(circle at 50% 35%, rgba(255,228,160,.34), rgba(255,228,160,.10) 70%);
+            box-shadow: 0 0 0 2px var(--brass-300), 0 0 16px -2px rgba(226,186,92,.65);
+            animation: reaction-pop .42s cubic-bezier(.2,.9,.3,1.2);
+        }
+        .reaction-btn.reacting img.emoji,
+        .reaction-btn.reacting { font-size: 1.35rem; }
+
+        @keyframes reaction-pop {
+            0%   { scale: .4; opacity: 0; }
+            55%  { scale: 1.28; opacity: 1; }
+            100% { scale: 1; opacity: 1; }
+        }
+
+        /* (3) A dealing animation that reads as cards coming off a deck in the
+           middle of the table: each card flies out from centre, spinning down
+           into place, staggered by its index. Replaces the previous drop-in. */
+        @keyframes deal-in {
+            0% {
+                opacity: 0;
+                translate: var(--deal-x, 0) var(--deal-y, 0);
+                rotate: var(--deal-rot, -180deg);
+                scale: .62;
+            }
+            60% { opacity: 1; }
+            100% {
+                opacity: 1;
+                translate: 0 0;
+                rotate: 0deg;
+                scale: 1;
+            }
+        }
+
+        .ai-hand .card-back,
+        #player-hand-south .card {
+            --deal-dur: .46s;
+        }
+
+        /* Cards fly from the centre of the table toward each seat. */
+        #player-north-area .ai-hand .card-back { --deal-x: 0;      --deal-y: 190px;  --deal-rot: 160deg; }
+        #player-west-area  .ai-hand .card-back { --deal-x: 190px;  --deal-y: 0;      --deal-rot: -150deg; }
+        #player-east-area  .ai-hand .card-back { --deal-x: -190px; --deal-y: 0;      --deal-rot: 150deg; }
+        #player-hand-south .card               { --deal-x: 0;      --deal-y: -230px; --deal-rot: -170deg; }
+
+        .ai-hand .card-back {
+            animation: deal-in var(--deal-dur) cubic-bezier(.18,.72,.24,1) backwards;
+            animation-delay: calc(var(--i, 0) * 48ms);
+        }
+
+        /* The player's own hand deals too, so the whole table fills together. */
+        #player-hand-south:not(.no-deal-anim) .card {
+            animation: deal-in var(--deal-dur) cubic-bezier(.18,.72,.24,1) backwards;
+            animation-delay: calc(var(--i, 0) * 48ms + 60ms);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ai-hand .card-back,
+            #player-hand-south .card { animation: none !important; }
+        }
+
     </style>
 </head>
 <body>
@@ -2675,7 +2810,7 @@ body{
                     <button class="reaction-btn" id="reaction-btn-north" title="Send Reaction" style="display: none;">😊</button>
                 </div>
                 <!-- UPDATED: Team Red -->
-                <div class="player-info"><span class="team-red-text">Team Red</span> | <span id="card-count-north">0</span> cards</div>
+                <div class="player-info"><span class="sr-only">Team Red, <span id="card-count-north">0</span> cards</span></div>
                 <div class="ai-hand" id="ai-hand-north"></div>
                 <div class="player-reaction" id="reaction-north"></div>
             </div>
@@ -2687,7 +2822,7 @@ body{
                     <button class="reaction-btn" id="reaction-btn-west" title="Send Reaction" style="display: none;">😊</button>
                 </div>
                 <!-- UPDATED: Team Blue -->
-                <div class="player-info"><span class="team-blue-text">Team Blue</span> | <span id="card-count-west">0</span> cards</div>
+                <div class="player-info"><span class="sr-only">Team Blue, <span id="card-count-west">0</span> cards</span></div>
                 <div class="ai-hand" id="ai-hand-west"></div>
                 <div class="player-reaction" id="reaction-west"></div>
             </div>
@@ -2699,7 +2834,7 @@ body{
                     <button class="reaction-btn" id="reaction-btn-east" title="Send Reaction" style="display: none;">😊</button>
                 </div>
                 <!-- UPDATED: Team Blue -->
-                <div class="player-info"><span class="team-blue-text">Team Blue</span> | <span id="card-count-east">0</span> cards</div>
+                <div class="player-info"><span class="sr-only">Team Blue, <span id="card-count-east">0</span> cards</span></div>
                 <div class="ai-hand" id="ai-hand-east"></div>
                 <div class="player-reaction" id="reaction-east"></div>
             </div>
@@ -2711,7 +2846,7 @@ body{
                     <button class="reaction-btn" id="reaction-btn-south" title="Send Reaction">😊</button>
                 </div>
                 <!-- UPDATED: Team Red -->
-                <div class="player-info"><span class="team-red-text">Team Red</span> | <span id="card-count-south">0</span> cards</div>
+                <div class="player-info"><span class="sr-only">Team Red, <span id="card-count-south">0</span> cards</span></div>
                 <div class="player-reaction" id="reaction-south"></div>
             </div>
 
@@ -3814,12 +3949,42 @@ body{
             };
 
             // Player names for display during game
-            let playerNames = {
-                south: 'South',
-                north: 'North',
-                east: 'East',
-                west: 'West'
-            };
+            // Opponents get real names rather than compass directions. The seat is
+            // already obvious from where the panel sits, so the name is free to be
+            // a name. Shuffled per match so the table is not identical every game.
+            const AI_NAME_POOL = [
+                'Amara', 'Bilal', 'Cassie', 'Dev', 'Elif', 'Farid', 'Greta', 'Hassan',
+                'Imani', 'Jonas', 'Kiran', 'Lena', 'Mateo', 'Nadia', 'Omar', 'Priya',
+                'Quinn', 'Rosa', 'Sami', 'Tariq', 'Uma', 'Viktor', 'Wren', 'Yusuf', 'Zara'
+            ];
+
+            function pickAINames() {
+                const pool = [...AI_NAME_POOL];
+                const picked = [];
+                for (let i = 0; i < 3; i++) {
+                    const idx = Math.floor(Math.random() * pool.length);
+                    picked.push(pool.splice(idx, 1)[0]);
+                }
+                return picked;
+            }
+
+            let playerNames = (() => {
+                const [n, e, w] = pickAINames();
+                return { south: 'You', north: n, east: e, west: w };
+            })();
+
+            /**
+             * Give the three non-human seats fresh names. Seats occupied by real
+             * players in multiplayer keep whatever name that player chose.
+             */
+            function assignAINames() {
+                const [n, e, w] = pickAINames();
+                const fresh = { north: n, east: e, west: w };
+                for (const pos of ['north', 'east', 'west']) {
+                    const humanHere = isMultiplayer && lobbyPlayers[pos];
+                    if (!humanHere) playerNames[pos] = fresh[pos];
+                }
+            }
 
             // --- CORE GAME LOGIC ---
 
@@ -3829,6 +3994,7 @@ body{
             function initMatch() {
                 console.log("Initializing new match...");
                 clearGameTimers(); // drop any continuations left over from a previous match
+                assignAINames();   // fresh opponents for a fresh match
                 matchScores = { teamRed: 0, teamBlue: 0 }; // Reset match scores
                 trumpCaller = 'south'; // South calls trump first
                 gameState = 'TRUMP_SELECTION'; // Start with trump selection
@@ -4312,14 +4478,29 @@ body{
                                 cardToPlay = playableCards[0];
                             }
                         } else {
-                            // Partner not winning. Find the cheapest card that GENUINELY
-                            // wins — playableCards is sorted ascending, so the first hit
-                            // is the cheapest. Comparing bare values here used to make the
-                            // AI play an honour of the led suit "over" an opponent's ruff,
-                            // which no side-suit card can ever beat.
-                            const bestCard = playableCards.find(c =>
+                            // Partner not winning. playableCards is sorted ascending.
+                            const winners = playableCards.filter(c =>
                                 cardBeats(c, winningEntry ? winningEntry.card : null, ledSuit, trumpSuit));
-                            cardToPlay = bestCard || playableCards[0]; // can't win: throw lowest
+                            const isLast = currentHand.length === POSITIONS.length - 1;
+
+                            if (winners.length === 0) {
+                                cardToPlay = playableCards[0];       // can't win: throw lowest
+                            } else if (isLast) {
+                                cardToPlay = winners[0];             // nobody left to overtake: cheapest
+                            } else {
+                                // Someone still plays after us. Taking the trick with the
+                                // CHEAPEST winner is how the AI used to lose tricks it
+                                // held the ace for: partner leads low, we win with the ten,
+                                // the last hand drops the jack. Prefer the cheapest card
+                                // that nothing still outstanding can beat; if we hold no
+                                // such card, play our highest ("third hand high") rather
+                                // than feeding a winner to the player behind us.
+                                const stillOut = outstandingInSuit(ledSuit, hand);
+                                const safe = winners.find(c =>
+                                    !stillOut.some(o => o.value > c.value));
+                                cardToPlay = safe || winners[winners.length - 1];
+                                if (safe) console.log(`Third hand: ${safe.rank}${safe.suit} cannot be overtaken`);
+                            }
                         }
                     } else {
                         // --- CAN'T FOLLOW SUIT ---
@@ -4336,8 +4517,10 @@ body{
                                 cardToPlay = nonTrumpCards[0];
                                 console.log(`Partner winning, walking aside with non-trump`);
                             } else {
-                                // Forced to play trump, play lowest
+                                // Forced: holding nothing but trumps, so the ruff is
+                                // unavoidable even though the partner already has it.
                                 cardToPlay = trumpCards[0];
+                                console.log(`FORCED-TRUMP ${player}: partner winning but hand is all trump`);
                             }
                         } else {
                             // COUNTER EXPECTED TRUMPS - check if opponents likely to trump
@@ -4437,19 +4620,33 @@ body{
                 const myTeam = players[currentPlayer].team;
                 const opponents = POSITIONS.filter(p => players[p].team !== myTeam);
 
+                // A suit is dangerous the moment ANY opponent is void in it, because
+                // that opponent will ruff. The old test only rejected a suit when
+                // EVERY opponent was void — which almost never happens — so the AI
+                // cheerfully led straight into suits it had already watched an
+                // opponent trump.
                 const safeSuits = [];
                 for (const suit of SUITS) {
                     if (suit === trumpSuit) continue; // Don't consider trump
-
-                    // Check if all opponents are void in this suit
-                    const allOpponentsVoid = opponents.every(opp => playerVoids[opp].has(suit));
-
-                    if (!allOpponentsVoid) {
+                    const anyOpponentVoid = opponents.some(opp => playerVoids[opp] && playerVoids[opp].has(suit));
+                    if (!anyOpponentVoid) {
                         safeSuits.push(suit);
                     }
                 }
 
                 return safeSuits;
+            }
+
+            /**
+             * Ranks of `suit` that no one has seen yet: not played, not on the table,
+             * and not in `myHand`. Whatever is left is in the three unseen hands.
+             */
+            function outstandingInSuit(suit, myHand) {
+                const seen = new Set();
+                playedCards.forEach(c => { if (c.suit === suit) seen.add(c.rank); });
+                currentHand.forEach(e => { if (e.card.suit === suit) seen.add(e.card.rank); });
+                myHand.forEach(c => { if (c.suit === suit) seen.add(c.rank); });
+                return RANKS.filter(r => !seen.has(r)).map(r => ({ suit, rank: r, value: RANK_VALUES[r] }));
             }
 
 
@@ -4965,6 +5162,7 @@ body{
                             const offset = startOffset + (i / (totalCards - 1 || 1)) * spreadWidth;
                             cardEl.style.transform = `translateX(${offset}px) rotate(${((i / (totalCards - 1)) - 0.5) * 10}deg)`;
                             cardEl.style.zIndex = i;
+                            cardEl.style.setProperty('--i', i); // stagger for the deal animation
                             cardEl.dataset.cardId = card.id;
                             // The player's own cards are controls, not decoration:
                             // make them focusable and operable from a keyboard.
@@ -6152,13 +6350,13 @@ body{
                 }
 
                 document.querySelector('#player-south-area .player-info').innerHTML =
-                    `${getTeamInfo(southPlayer)} | <span id="card-count-south">0</span> cards`;
+                    `<span class="sr-only">${getTeamInfo(southPlayer)}, <span id="card-count-south">0</span> cards</span>`;
                 document.querySelector('#player-north-area .player-info').innerHTML =
-                    `${getTeamInfo(northPlayer)} | <span id="card-count-north">0</span> cards`;
+                    `<span class="sr-only">${getTeamInfo(northPlayer)}, <span id="card-count-north">0</span> cards</span>`;
                 document.querySelector('#player-east-area .player-info').innerHTML =
-                    `${getTeamInfo(eastPlayer)} | <span id="card-count-east">0</span> cards`;
+                    `<span class="sr-only">${getTeamInfo(eastPlayer)}, <span id="card-count-east">0</span> cards</span>`;
                 document.querySelector('#player-west-area .player-info').innerHTML =
-                    `${getTeamInfo(westPlayer)} | <span id="card-count-west">0</span> cards`;
+                    `<span class="sr-only">${getTeamInfo(westPlayer)}, <span id="card-count-west">0</span> cards</span>`;
 
                 // Re-cache card count elements since we rebuilt the HTML
                 cardCounts.south = document.getElementById('card-count-south');
@@ -6198,13 +6396,9 @@ body{
                 document.getElementById('share-btn').style.display = 'none';
                 document.getElementById('menu-btn').style.display = 'none';
 
-                // Reset player names
-                playerNames = {
-                    south: 'South',
-                    north: 'North',
-                    east: 'East',
-                    west: 'West'
-                };
+                // Reset player names (fresh opponents next match)
+                playerNames.south = 'You';
+                assignAINames();
 
                 showMainMenu();
             }
@@ -6974,21 +7168,32 @@ body{
                 if (!ALLOWED_REACTIONS.includes(emoji)) return;
                 if (!POSITIONS.includes(position)) return;
                 const visualPos = getVisualPosition(position);
-                const reactionEl = document.getElementById(`reaction-${visualPos}`);
-                if (!reactionEl) return;
-                reactionEl.innerHTML = parseEmojis(emoji);
-                reactionEl.style.display = 'block';
 
-                // Cancel the previous hide timer for this seat. Without this, a second
-                // reaction sent within 8s inherited the first one's timer and vanished
-                // early — and every reaction left a timer running regardless.
+                // Show the reaction ON that seat's reaction button rather than in a
+                // separate bubble pinned to the corner of the panel. The button is
+                // where the player already looks, and an opponent's button is
+                // normally hidden, so reveal it for as long as the reaction shows.
+                const btn = document.getElementById(`reaction-btn-${visualPos}`);
+                if (!btn) return;
+
                 if (reactionHideTimers[visualPos]) {
                     clearTimeout(reactionHideTimers[visualPos]);
                 }
+                if (!btn.dataset.restoreDisplay) {
+                    btn.dataset.restoreDisplay = btn.style.display || '';
+                }
+
+                btn.style.display = 'flex';
+                btn.innerHTML = parseEmojis(emoji);
+                btn.classList.add('reacting');
+
                 reactionHideTimers[visualPos] = setTimeout(() => {
-                    reactionEl.style.display = 'none';
+                    btn.classList.remove('reacting');
+                    btn.innerHTML = parseEmojis('😊');
+                    btn.style.display = btn.dataset.restoreDisplay;
+                    delete btn.dataset.restoreDisplay;
                     reactionHideTimers[visualPos] = null;
-                }, 8000);
+                }, 5000);
             }
 
             // --- TWEMOJI INITIALIZATION ---
