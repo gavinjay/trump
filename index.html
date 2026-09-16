@@ -4048,6 +4048,11 @@ body{
                 console.log("Initializing new match...");
                 clearGameTimers(); // drop any continuations left over from a previous match
                 assignAINames();   // fresh opponents for a fresh match
+                // Repaint immediately: callers such as the Play vs AI button render
+                // the panels BEFORE calling initMatch, so without this the table kept
+                // showing the previous set of names while the match log reported the
+                // new ones — a player who was never at the table.
+                updatePlayerAreaNames();
                 matchLog = [];     // a new match starts a new history
                 matchScores = { teamRed: 0, teamBlue: 0 }; // Reset match scores
                 trumpCaller = 'south'; // South calls trump first
@@ -4428,7 +4433,7 @@ body{
 
                 gameTimeout(() => {
                     updateStatusMessage(`Trump is ${getSuitSymbol(trumpSuit)}. ${capitalize(handLeader)} starts.`);
-                logMatchEvent(`Trump is ${trumpSuit} \u2014 called by ${playerNames[trumpCaller] || trumpCaller}`, 'hand');
+                logMatchEvent(`Trump is ${SUIT_NAMES[trumpSuit] || trumpSuit} ${getSuitSymbol(trumpSuit)} \u2014 called by ${playerNames[trumpCaller] || capitalize(trumpCaller)}`, 'hand');
                     nextTurn();
                 }, 1000);
             }
