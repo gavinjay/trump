@@ -2655,7 +2655,12 @@ body{
             #player-hand-south .card.playable:hover {
                 translate: 0 -6px;          /* match .playable resting lift */
                 scale: 1;
-                z-index: auto !important;
+                /* Restore this card's own place in the fan. The desktop hover rule
+                   forces z-index:150, and a CSS !important beats the inline z-index
+                   the renderer writes per card — so neutralising it with `auto` sent
+                   the stuck-hovered card BEHIND every sibling instead of leaving it
+                   where it belongs. --i is that same index, set alongside it. */
+                z-index: var(--i, 0) !important;
             }
             #player-hand-south .card.disabled:hover {
                 translate: 0 0;
