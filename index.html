@@ -2813,6 +2813,109 @@ body{
         }
         #status-message:active { opacity: .7; }
 
+
+        /* ============================================================
+           FEEDBACK PASS 2
+           ============================================================ */
+
+        /* --- Trump indicator: a small face-up card on the felt ---------------
+           The brass pill in the top bar is gone. Trump is shown the way a card
+           game shows it — the turned-up card, sitting on the table just under
+           the score bar, in the same stock and suit colours as the deck. */
+        #trump-display {
+            justify-self: center;
+            position: absolute;
+            top: 104px;
+            left: 10px;
+            z-index: 60;
+            display: none;
+            padding: 0;
+            border: 0;
+            background: none;
+            box-shadow: none;
+            text-shadow: none;
+            overflow: visible;
+            letter-spacing: normal;
+            text-transform: none;
+            pointer-events: none;
+        }
+        #trump-display.has-trump {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+        }
+        #trump-display .trump-label {
+            font-size: .56rem;
+            font-weight: 800;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: var(--brass-300);
+            text-shadow: 0 1px 2px rgba(0,0,0,.6);
+        }
+        #trump-display .trump-pip {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 46px;
+            border-radius: 5px;
+            font-size: 1.5rem;
+            line-height: 1;
+            rotate: -6deg;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(255,255,255,0) 44%),
+                radial-gradient(120% 95% at 20% 8%, #fffefb 0%, var(--stock) 58%, var(--stock-200) 100%);
+            border: 1px solid var(--stock-edge);
+            box-shadow:
+                inset 0 1px 0 var(--edge-light),
+                0 1px 2px rgba(6,14,9,.4),
+                0 6px 14px -5px rgba(0,0,0,.55);
+        }
+        /* Suit colour comes from CSS, not the system emoji font. */
+        #trump-display.suit-S .trump-pip,
+        #trump-display.suit-C .trump-pip { color: var(--suit-spade); }
+        #trump-display.suit-H .trump-pip,
+        #trump-display.suit-D .trump-pip { color: var(--suit-heart); }
+
+        @media (max-width: 480px) {
+            #trump-display { top: 100px; left: 8px; }
+            #trump-display .trump-pip { width: 30px; height: 41px; font-size: 1.3rem; }
+        }
+        @media (max-height: 500px) {
+            #trump-display { top: 86px; }
+            #trump-display .trump-pip { width: 28px; height: 38px; font-size: 1.2rem; }
+        }
+
+        /* --- Matte carbon ----------------------------------------------------
+           The weave had a broad specular sheen and bright inset highlights that
+           read as gloss. Flatten the light and drop the weave contrast so the
+           backs look like matte carbon rather than polished resin. */
+        .card-back {
+            background-image:
+                linear-gradient(  27deg, rgba(255,255,255,.032) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.032) 87.5%),
+                linear-gradient( -27deg, rgba(255,255,255,.032) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.032) 87.5%),
+                linear-gradient(  27deg, rgba(255,255,255,.032) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.032) 87.5%),
+                linear-gradient( -27deg, rgba(255,255,255,.032) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.032) 87.5%),
+                linear-gradient(150deg, #1b1e22 0%, #17191d 50%, #131519 100%),
+                radial-gradient(130% 100% at 30% 10%, rgba(255,255,255,.035) 0%, rgba(255,255,255,0) 60%);
+            box-shadow:
+                0 0 0 1px rgba(4,7,9,.62),
+                inset 0 1px 0 rgba(255,255,255,.05),
+                inset 0 -1px 0 rgba(0,0,0,.35),
+                var(--lift-rest);
+        }
+
+        /* --- Darker felt ----------------------------------------------------- */
+        :root {
+            --felt-key:   #13603c;
+            --felt:       #073f26;
+            --felt-shade: #042a19;
+            --felt-deep:  #01110a;
+            --table-green: var(--felt);
+            --table-green-dark: #05301d;
+        }
+
     </style>
 </head>
 <body>
@@ -5407,12 +5510,20 @@ body{
                 }
             }
 
+            // Text-presentation suit glyphs (\uFE0E). The emoji-presentation forms
+            // used before are drawn by the system emoji font, which on iOS renders
+            // clubs green and diamonds blue regardless of any CSS colour.
+            const SUIT_GLYPH = { S: '\u2660\uFE0E', H: '\u2665\uFE0E', D: '\u2666\uFE0E', C: '\u2663\uFE0E' };
+
             function updateTrumpDisplay() {
                 const trumpDisplay = document.getElementById('trump-display');
-                if (trumpSuit) {
-                    const suit = getSuitSymbol(trumpSuit);
-                    trumpDisplay.innerHTML = `Trump: <span class="suit-${trumpSuit}">${parseEmojis(suit)}</span>`;
+                if (trumpSuit && SUIT_GLYPH[trumpSuit]) {
+                    trumpDisplay.className = `has-trump suit-${trumpSuit}`;
+                    trumpDisplay.innerHTML =
+                        `<span class="trump-label">Trump</span>` +
+                        `<span class="trump-pip">${SUIT_GLYPH[trumpSuit]}</span>`;
                 } else {
+                    trumpDisplay.className = '';
                     trumpDisplay.innerHTML = '';
                 }
             }
