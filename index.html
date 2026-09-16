@@ -2700,10 +2700,16 @@ body{
                 var(--cf) var(--cf),
                 var(--cf) var(--cf),
                 0 0, 0 0;
-            border: 1px solid #0a0c0e;
+            /* A pale cut edge, the way a real card shows white where the stock is
+               trimmed. The back was bordered in near-black, so a fan of them merged
+               into one dark mass and the count was impossible to read. The dark
+               hairline just outside it keeps the pale edge crisp against the felt
+               and stops two touching cards blurring into a single wide line. */
+            border: 1.5px solid #efeadf;
             box-shadow:
-                inset 0 1px 0 rgba(255,255,255,.14),
-                inset 0 -1px 0 rgba(0,0,0,.55),
+                0 0 0 1px rgba(4,7,9,.62),
+                inset 0 1px 0 rgba(255,255,255,.10),
+                inset 0 -1px 0 rgba(0,0,0,.5),
                 var(--lift-rest);
         }
         /* Kill the old brass medallion the previous back drew. */
