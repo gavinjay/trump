@@ -5547,6 +5547,51 @@ body{
                 )].filter(el => el.offsetParent !== null && !el.disabled);
             }
 
+            /**
+             * The overlay is a flex row, so every panel left at display:block shows
+             * up BESIDE the one you wanted. Openers were each responsible for hiding
+             * the others by hand and kept missing one — the main menu in particular,
+             * which is why Stats opened next to it and then sat on top of the New
+             * Game buttons after closing, with no way back but a page reload.
+             *
+             * showOnlyModal is now the single way to open a panel: it hides every
+             * sibling first. Pass remember:true to record what was open so closing
+             * can return there.
+             */
+            let modalReturnTo = null;
+
+            function currentModalId() {
+                const overlay = document.getElementById('modal-overlay');
+                // display:block alone is not "open" — the overlay's .visible class is
+                // what actually shows a panel.
+                if (!overlay.classList.contains('visible')) return null;
+                const shown = [...overlay.querySelectorAll('.modal-content')]
+                    .find(m => m.style.display === 'block');
+                return shown ? shown.id : null;
+            }
+
+            function showOnlyModal(id, { remember = false } = {}) {
+                const overlay = document.getElementById('modal-overlay');
+                if (remember) modalReturnTo = currentModalId();
+                overlay.querySelectorAll('.modal-content').forEach(m => {
+                    m.style.display = (m.id === id) ? 'block' : 'none';
+                });
+                showModal();
+            }
+
+            /** Close the current panel, returning to whatever it was opened over. */
+            function closeModalReturning() {
+                const back = modalReturnTo;
+                modalReturnTo = null;
+                if (back) {
+                    showOnlyModal(back);
+                    return;
+                }
+                document.getElementById('modal-overlay')
+                    .querySelectorAll('.modal-content').forEach(m => m.style.display = 'none');
+                hideModal();
+            }
+
             function showModal() {
                 lastFocusedBeforeModal = document.activeElement;
                 modalOverlay.classList.add('visible');
@@ -6918,7 +6963,7 @@ body{
             });
 
             document.getElementById('close-help-btn').addEventListener('click', () => {
-                hideModal();
+                closeModalReturning();
             });
 
             // Share button
@@ -6937,7 +6982,7 @@ body{
             });
 
             document.getElementById('close-share-btn').addEventListener('click', () => {
-                hideModal();
+                closeModalReturning();
             });
 
             // The share modal's copy button. It previously reused the lobby button's
@@ -6963,7 +7008,10 @@ body{
 
             // Game menu buttons
             document.getElementById('close-game-menu-btn').addEventListener('click', () => {
-                hideModal();
+                // Clear the panel too, not just the overlay. A panel left at
+                // display:block is the stale state that made Stats open beside the
+                // main menu and then cover the New Game buttons.
+                closeModalReturning();
             });
 
             document.getElementById('new-game-btn').addEventListener('click', () => {
@@ -7002,7 +7050,7 @@ body{
             });
 
             document.getElementById('close-about-btn').addEventListener('click', () => {
-                hideModal();
+                closeModalReturning();
             });
 
             document.getElementById('back-to-game-menu-btn').addEventListener('click', () => {
@@ -7011,13 +7059,7 @@ body{
 
             // Helper functions for game menu
             function showGameMenu() {
-                document.getElementById('game-menu-modal').style.display = 'block';
-                trumpModal.style.display = 'none';
-                gameOverModal.style.display = 'none';
-                document.getElementById('help-modal').style.display = 'none';
-                document.getElementById('share-modal').style.display = 'none';
-                document.getElementById('kick-player-modal').style.display = 'none';
-                document.getElementById('about-modal').style.display = 'none';
+                showOnlyModal('game-menu-modal');
 
                 // Hide kick player and host link buttons (removed features)
                 document.getElementById('kick-player-btn').style.display = 'none';
@@ -7157,14 +7199,7 @@ body{
              * Show player stats modal
              */
             async function showStatsModal() {
-                document.getElementById('stats-modal').style.display = 'block';
-                trumpModal.style.display = 'none';
-                gameOverModal.style.display = 'none';
-                document.getElementById('help-modal').style.display = 'none';
-                document.getElementById('share-modal').style.display = 'none';
-                document.getElementById('game-menu-modal').style.display = 'none';
-                document.getElementById('leaderboard-modal').style.display = 'none';
-                showModal();
+                showOnlyModal('stats-modal', { remember: true });
 
                 document.getElementById('stats-loading').style.display = 'block';
                 document.getElementById('stats-content').style.display = 'none';
@@ -7237,7 +7272,17 @@ body{
                     document.getElementById('stats-loading').style.display = 'none';
                     document.getElementById('stats-content').style.display = 'block';
                 } else {
-                    document.getElementById('stats-loading').innerHTML = 'Failed to load stats. Please try again.';
+                    document.getElementById('stats-loading').innerHTML = !firebaseEnabled
+                        ? `<div style="text-align:center;padding:14px 10px;line-height:1.5;">
+                            <div style="font-size:1.6rem;margin-bottom:8px;">\u2601\uFE0F</div>
+                            <strong style="display:block;margin-bottom:6px;">Not available yet</strong>
+                            <span style="color:#666;font-size:.85rem;">
+                                Player statistics are stored in the cloud, which needs a Firebase project
+                                connected and an account signed in. Until then the game plays
+                                perfectly \u2014 nothing is recorded between sessions.
+                            </span>
+                        </div>`
+                        : 'Sign in to keep statistics across sessions.';
                 }
             }
 
@@ -7245,14 +7290,7 @@ body{
              * Show leaderboard modal
              */
             async function showLeaderboardModal() {
-                document.getElementById('leaderboard-modal').style.display = 'block';
-                trumpModal.style.display = 'none';
-                gameOverModal.style.display = 'none';
-                document.getElementById('help-modal').style.display = 'none';
-                document.getElementById('share-modal').style.display = 'none';
-                document.getElementById('game-menu-modal').style.display = 'none';
-                document.getElementById('stats-modal').style.display = 'none';
-                showModal();
+                showOnlyModal('leaderboard-modal', { remember: true });
 
                 document.getElementById('leaderboard-loading').style.display = 'block';
                 document.getElementById('leaderboard-content').style.display = 'none';
@@ -7263,7 +7301,17 @@ body{
                 leaderboardList.innerHTML = '';
 
                 if (leaderboard.length === 0) {
-                    leaderboardList.innerHTML = '<div style="color: #999; font-style: italic; text-align: center; padding: 20px;">No players yet. Be the first!</div>';
+                    leaderboardList.innerHTML = !firebaseEnabled
+                        ? `<div style="text-align:center;padding:14px 10px;line-height:1.5;">
+                            <div style="font-size:1.6rem;margin-bottom:8px;">\u2601\uFE0F</div>
+                            <strong style="display:block;margin-bottom:6px;">Not available yet</strong>
+                            <span style="color:#666;font-size:.85rem;">
+                                Leaderboards are stored in the cloud, which needs a Firebase project
+                                connected and an account signed in. Until then the game plays
+                                perfectly \u2014 nothing is recorded between sessions.
+                            </span>
+                        </div>`
+                        : '<div style="color: #999; font-style: italic; text-align: center; padding: 20px;">No players yet. Be the first!</div>';
                 } else {
                     leaderboard.forEach(entry => {
                         const entryEl = document.createElement('div');
@@ -7305,11 +7353,11 @@ body{
             });
 
             document.getElementById('close-stats-btn').addEventListener('click', () => {
-                hideModal();
+                closeModalReturning();
             });
 
             document.getElementById('close-leaderboard-btn').addEventListener('click', () => {
-                hideModal();
+                closeModalReturning();
             });
 
             // Team selection button listeners
