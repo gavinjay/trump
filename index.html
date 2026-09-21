@@ -3201,6 +3201,8 @@ body{
                 <button class="menu-btn menu-btn-primary" id="new-game-btn">New Game</button>
                 <button class="menu-btn menu-btn-secondary" id="kick-player-btn" style="display: none;">Kick Player</button>
                 <button class="menu-btn menu-btn-secondary" id="host-link-btn" style="display: none;">Host Link</button>
+                <button class="menu-btn menu-btn-secondary" id="game-menu-stats-btn">📊 View Stats</button>
+                <button class="menu-btn menu-btn-secondary" id="game-menu-leaderboard-btn">🏆 Leaderboard</button>
                 <button class="menu-btn menu-btn-secondary" id="about-btn">About</button>
                 <button class="back-btn" id="close-game-menu-btn">← Back to Game</button>
             </div>
@@ -7344,6 +7346,14 @@ body{
             }
 
             // Stats and Leaderboard button listeners
+            document.getElementById('game-menu-stats-btn').addEventListener('click', () => {
+                showStatsModal();
+            });
+
+            document.getElementById('game-menu-leaderboard-btn').addEventListener('click', () => {
+                showLeaderboardModal();
+            });
+
             document.getElementById('view-stats-btn').addEventListener('click', () => {
                 showStatsModal();
             });
