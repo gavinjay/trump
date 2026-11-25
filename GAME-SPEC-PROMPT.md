@@ -58,9 +58,13 @@ validation through it. That keeps the follow-suit and trump-broken rules in one 
 
 ## 4. Winning a hand
 
-- A hand ends **immediately** when a team reaches **7 tricks** (majority of 13).
-- If all 13 are played without that, the team with more tricks wins the hand.
+- A hand ends **immediately** when a team reaches **7 tricks** (majority of 13). The
+  loser's remaining cards are never played.
 - Winning a hand scores **1 point** for that team.
+- Keep a "if all 13 are played, most tricks wins" fallback as defensive code, but note it
+  is mathematically unreachable: 6 + 6 = 12 < 13, so some team always reaches 7 first.
+  There is no "going" and no trick-difference scoring — one hand is worth exactly 1 point
+  whether it was won 7–0 or 7–6.
 
 ## 5. Winning the match
 
@@ -78,11 +82,28 @@ counts "games" — that confusion makes a 4–1 score look like a finished best-
 
 ## 6. Trump caller rotation
 
-- Hand 1 of a match: **south**.
-- After each hand, the caller moves to the winning team, alternating within that team:
-  - Team Red alternates **south ↔ north**.
-  - Team Blue alternates **east ↔ west** (starting at east when coming from Team Red).
-- On a redeal, the **same player** calls again.
+- Hand 1 of a match: **south**. (Every new match restarts at south.)
+- After each hand the call goes to the **team that won that hand**. Which member of that
+  team calls is decided by flipping against the *current* caller — the teams do **not**
+  each remember their own last caller:
+  - Winner is Team Red → caller becomes `north` if the current caller is `south`,
+    otherwise `south`.
+  - Winner is Team Blue → caller becomes `west` if the current caller is `east`,
+    otherwise `east`.
+
+  The full table, which is easier to implement from than prose:
+
+  | current caller | Red wins → | Blue wins → |
+  |---|---|---|
+  | south | north | east |
+  | north | south | east |
+  | east  | south | west |
+  | west  | south | east |
+
+  So a team that keeps winning alternates between its two players, but whenever the call
+  **crosses to the other team it always lands on that team's default member** — south for
+  Red, east for Blue — regardless of which of the two called last time that team held it.
+- On a **redeal**, the caller does not change: the same player calls again.
 
 ## 7. The AI opponent
 
